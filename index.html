@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KangaRun — tiny platformer</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#0e1530; --accent:#ffd54a; --accent2:#91e0ff; --good:#70e07e; --danger:#ff7b7b;
+      --text:#e8eefc;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;}
+    body{
+      margin:0; font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      background: radial-gradient(1200px 800px at 70% -20%, #1a2a6c 0%, #0b1020 60%) fixed;
+      color:var(--text);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .wrap{width:min(100vw,1000px); padding:12px;}
+    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px}
+    h1{font-size:clamp(18px,2.6vw,24px); margin:0; letter-spacing:.5px}
+    .panel{background:linear-gradient(180deg, #0f1735, #0a0f25); border:1px solid #1f2a56; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.35);}
+    .hud{display:flex; gap:16px; align-items:center; padding:8px 12px;}
+    .hud .pill{background:#0a122c; border:1px solid #1b2754; padding:6px 10px; border-radius:999px; font-size:14px;}
+    .hud b{color:var(--accent)}
+    .btn{appearance:none; border:1px solid #2a376e; background:#0e1a3b; color:#e8eefc; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600}
+    .btn:hover{filter:brightness(1.15)}
+    .canvasWrap{position:relative}
+    canvas{display:block; width:100%; height:auto; border-radius:14px; border:1px solid #1f2a56; background:#142040}
+    #overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none}
+    .card{max-width:720px; padding:16px 20px; text-align:center; background:rgba(5,8,18,.82); border:1px solid #263369; border-radius:16px; backdrop-filter: blur(6px);}
+    .card h2{margin:.2rem 0 .5rem 0}
+    .card p{margin:.2rem 0 .6rem 0; line-height:1.35}
+    .kbd{display:inline-grid; grid-auto-flow:column; gap:6px; align-items:center; background:#0b1330; border:1px solid #253169; padding:4px 10px; border-radius:10px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px}
+    footer{margin-top:8px; opacity:.85; font-size:12px; text-align:center}
+    .heart{color:var(--danger)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🦘 KangaRun — bananas, spiders & boomerangs</h1>
+      <div class="panel hud" id="hud">
+        <div class="pill">Score: <b id="score">0</b></div>
+        <div class="pill">Lives: <b id="lives">3</b></div>
+        <div class="pill">Level: <b id="level">1</b></div>
+        <button class="btn" id="btnPause" aria-label="Pause/Resume (P)">⏯︎ Pause (P)</button>
+        <button class="btn" id="btnReset" aria-label="Restart (R)">↺ Reset (R)</button>
+      </div>
+    </header>
+
+    <div class="panel canvasWrap">
+      <canvas id="game" width="960" height="540" aria-label="Game canvas"></canvas>
+      <div id="overlay"></div>
+    </div>
+    <footer>
+      Built with ❤️ using plain HTML5 Canvas. Controls: <span class="kbd">←/A</span> <span class="kbd">→/D</span> to run, <span class="kbd">Space/↑/W</span> to jump, <span class="kbd">P</span> pause, <span class="kbd">R</span> restart.
+    </footer>
+  </div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const scoreEl = document.getElementById('score');
+  const livesEl = document.getElementById('lives');
+  const levelEl = document.getElementById('level');
+  const pauseBtn = document.getElementById('btnPause');
+  const resetBtn = document.getElementById('btnReset');
+
+  // Hi‑DPI scaling
+  function fitCanvas(){
+    const dpr = Math.min(window.devicePixelRatio||1, 2);
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.round(rect.width * dpr);
+    const h = Math.round(rect.height * dpr);
+    if(canvas.width!==w || canvas.height!==h){
+      canvas.width=w; canvas.height=h;
+    }
+    scale = dpr;
+  }
+  let scale = 1; fitCanvas();
+  addEventListener('resize', fitCanvas);
+
+  // Utilities
+  const rand = (a,b)=> a + Math.random()*(b-a);
+  const clamp = (v,a,b)=> Math.max(a, Math.min(b,v));
+  const sign = (v)=> v<0?-1:1;
+
+  // Input
+  const keys = new Set();
+  addEventListener('keydown', e=>{ if(['ArrowUp','ArrowLeft','ArrowRight','Space','KeyA','KeyD','KeyW','KeyP','KeyR'].includes(e.code)) e.preventDefault(); keys.add(e.code); });
+  addEventListener('keyup', e=>{ keys.delete(e.code); });
+
+  // Game state
+  const G = {
+    gravity: 2000,
+    moveSpeed: 260,
+    jump: 620,
+    friction: 0.86,
+    maxLives: 3,
+    running: true,
+    gameOver: false,
+    level: 1,
+    score: 0,
+    bananasInLevel: 0,
+  };
+
+  class Rect{
+    constructor(x,y,w,h){ this.x=x; this.y=y; this.w=w; this.h=h; }
+    get left(){return this.x}
+    get right(){return this.x+this.w}
+    get top(){return this.y}
+    get bottom(){return this.y+this.h}
+    intersects(o){return !(this.right<o.left || this.left>o.right || this.bottom<o.top || this.top>o.bottom)}
+  }
+
+  class Player{
+    constructor(){
+      this.w=44; this.h=44;
+      this.spawnX=80; this.spawnY=360;
+      this.reset();
+    }
+    reset(){
+      this.x=this.spawnX; this.y=this.spawnY; this.vx=0; this.vy=0; this.onGround=false; this.dir=1; this.inv=0;
+    }
+    rect(){return new Rect(this.x, this.y, this.w, this.h)}
+    update(dt, world){
+      // input
+      let ax=0;
+      if(keys.has('ArrowLeft')||keys.has('KeyA')) ax-=1;
+      if(keys.has('ArrowRight')||keys.has('KeyD')) ax+=1;
+      this.vx += ax * G.moveSpeed * dt;
+      if(Math.abs(ax)<0.01) this.vx *= G.friction; // drift slow
+
+      this.dir = ax!==0? sign(ax): this.dir;
+
+      // jump
+      if((keys.has('Space')||keys.has('ArrowUp')||keys.has('KeyW')) && this.onGround){
+        this.vy = -G.jump; this.onGround=false;
+      }
+
+      // gravity
+      this.vy += G.gravity*dt;
+
+      // integrate
+      this.x += this.vx*dt; this.y += this.vy*dt;
+
+      // world bounds
+      if(this.x<0) {this.x=0; this.vx=0}
+      if(this.x>world.w-this.w){this.x=world.w-this.w; this.vx=0}
+
+      // platforms collision (AABB vs AABB, simple from-top landings)
+      this.onGround=false;
+      const r=this.rect();
+      for(const p of world.platforms){
+        const pr = p.rect();
+        if(r.intersects(pr)){
+          const prevY = this.y - this.vy*dt; // approximate previous y for side resolution
+          const cameFromAbove = prevY + this.h <= pr.top + 2; // fudge
+          if(cameFromAbove && this.vy>0){
+            this.y = pr.top - this.h; this.vy=0; this.onGround=true;
+          } else if(this.x+this.w/2 < pr.left){
+            this.x = pr.left - this.w; this.vx=0;
+          } else if(this.x+this.w/2 > pr.right){
+            this.x = pr.right; this.vx=0;
+          }
+        }
+      }
+
+      // fell below
+      if(this.y>world.h+200) world.loseLife();
+
+      if(this.inv>0) this.inv-=dt;
+    }
+    draw(c){
+      // Kangaroo (stylized) — body
+      const t = performance.now()/1000;
+      const hop = this.onGround? 0 : Math.sin(t*30)*1.5;
+      c.save();
+      c.translate(this.x+this.w/2, this.y+this.h/2+hop);
+      c.scale(this.dir,1);
+
+      // tail
+      c.fillStyle = '#b07b3a';
+      c.beginPath(); c.moveTo(-10,12); c.quadraticCurveTo(-34,6,-46,14); c.quadraticCurveTo(-28,20,-10,18); c.closePath(); c.fill();
+
+      // body
+      c.fillStyle = '#c58a43';
+      c.beginPath(); c.ellipse(0, 6, 18, 14, 0, 0, Math.PI*2); c.fill();
+      // head
+      c.beginPath(); c.ellipse(10,-10,10,9,0,0,Math.PI*2); c.fill();
+      // ear
+      c.beginPath(); c.moveTo(16,-18); c.lineTo(22,-28); c.lineTo(10,-20); c.closePath(); c.fill();
+      // arm
+      c.beginPath(); c.moveTo(8,4); c.lineTo(18,8); c.lineTo(10,10); c.closePath(); c.fill();
+      // legs
+      c.beginPath(); c.moveTo(-6,14); c.lineTo(6,14); c.lineTo(10,22); c.lineTo(-10,22); c.closePath(); c.fill();
+      // eye
+      c.fillStyle = '#222'; c.beginPath(); c.arc(13,-12,1.5,0,6.28); c.fill();
+
+      // little shine when invincible
+      if(this.inv>0){ c.strokeStyle='rgba(255,255,255,.8)'; c.lineWidth=2; c.strokeRect(-this.w/2+1,-this.h/2+1,this.w-2,this.h-2); }
+
+      c.restore();
+    }
+  }
+
+  class Platform{
+    constructor(x,y,w,h=12,color='#2c3c72'){ this.x=x; this.y=y; this.w=w; this.h=h; this.color=color; }
+    rect(){return new Rect(this.x,this.y,this.w,this.h)}
+    draw(c){ c.fillStyle=this.color; c.fillRect(this.x,this.y,this.w,this.h); }
+  }
+
+  class Banana{
+    constructor(x,y){ this.x=x; this.y=y; this.r=10; this.t=rand(0,6.28); this.taken=false; }
+    rect(){ return new Rect(this.x-this.r, this.y-this.r, this.r*2, this.r*2); }
+    update(dt){ this.t += dt*3; }
+    draw(c){ if(this.taken) return; const r=this.r; c.save(); c.translate(this.x,this.y-4+Math.sin(this.t)*3); c.rotate(-0.4);
+      // banana crescent
+      c.fillStyle = '#ffd54a';
+      c.beginPath(); c.arc(0,0,r, Math.PI*.1, Math.PI*1.9, false); c.arc(3,0,r-6, Math.PI*1.9, Math.PI*.1, true); c.closePath(); c.fill();
+      c.fillStyle='#a07200'; c.beginPath(); c.arc(-r*.9, -1, 2.5, 0, 6.28); c.arc(r*.9, 1, 2.5, 0, 6.28); c.fill();
+      c.restore(); }
+  }
+
+  class Spider{
+    constructor(x, topY, span){ this.x=x; this.topY=topY; this.span=span; this.t=rand(0,6.28); this.r=12; }
+    get y(){ return this.topY + (Math.sin(this.t)*0.5+0.5)*this.span; }
+    rect(){ return new Rect(this.x-this.r, this.y-this.r, this.r*2, this.r*2); }
+    update(dt){ this.t += dt*1.3; }
+    draw(c){ const y=this.y; c.save();
+      // string
+      c.strokeStyle='#cdd6ff'; c.lineWidth=1; c.beginPath(); c.moveTo(this.x, this.topY-60); c.lineTo(this.x, y); c.stroke();
+      // body
+      c.fillStyle='#2e2e39'; c.beginPath(); c.arc(this.x, y, this.r, 0, 6.28); c.fill();
+      // legs
+      for(let i=0;i<4;i++){
+        const off=i*6; c.beginPath(); c.moveTo(this.x-this.r+2, y-4+off/8); c.lineTo(this.x-this.r-6, y-10+off/8); c.strokeStyle='#252530'; c.stroke();
+        c.beginPath(); c.moveTo(this.x+this.r-2, y-4+off/8); c.lineTo(this.x+this.r+6, y-10+off/8); c.stroke();
+      }
+      c.restore(); }
+  }
+
+  class Boomerang{
+    constructor(x,y,dir=1){ this.x=x; this.y=y; this.dir=dir; this.t=0; this.speed=140+Math.random()*60; this.r=10; this.dead=false; }
+    rect(){ return new Rect(this.x-14, this.y-14, 28, 28); }
+    update(dt,world){
+      this.t += dt*2.2; 
+      this.x += this.dir * this.speed * dt;
+      this.y += Math.sin(this.t*2) * 30 * dt * 2.5;
+      if(this.x<-60 || this.x>world.w+60) this.dead=true;
+    }
+    draw(c){ c.save(); c.translate(this.x,this.y); c.rotate(this.t*3*this.dir);
+      c.fillStyle='#f4af2d'; c.beginPath(); c.moveTo(-18,-4); c.quadraticCurveTo(0,-16,18,-4); c.quadraticCurveTo(0,6,-18,-4); c.closePath(); c.fill();
+      c.strokeStyle='#5c3b00'; c.lineWidth=2; c.stroke(); c.restore(); }
+  }
+
+  class World{
+    constructor(){ this.w=960; this.h=540; this.platforms=[]; this.bananas=[]; this.spiders=[]; this.boomerangs=[]; this.spawnTimer=0; this.player=new Player(); this.resetLevel(1); }
+    resetLevel(n){
+      G.level = n; levelEl.textContent=n;
+      this.platforms=[
+        new Platform(0,this.h-18,this.w,18,'#213067'),
+        new Platform(80,420,200,14),
+        new Platform(340,360,160,14),
+        new Platform(560,300,160,14),
+        new Platform(770,240,160,14),
+        new Platform(180,250,120,14),
+      ];
+      this.bananas=[]; this.spiders=[]; this.boomerangs=[]; this.spawnTimer=0;
+
+      // scatter bananas on platforms
+      const spots=[ [120,380],[220,380],[360,320],[420,320],[600,260],[740,220],[820,200],[200,210] ];
+      for(const [x,y] of spots){ this.bananas.push( new Banana(x,y) ); }
+      G.bananasInLevel = this.bananas.length;
+
+      // spiders hanging near platforms
+      this.spiders.push( new Spider(340, 180, 120) );
+      this.spiders.push( new Spider(740, 120, 150) );
+
+      // boomerang launchers (off‑screen)
+      this.boomerangs.push(new Boomerang(-30, 140, +1));
+      this.boomerangs.push(new Boomerang(this.w+30, 360, -1));
+
+      this.player.reset();
+    }
+
+    loseLife(){
+      if(G.gameOver) return;
+      G.maxLives = Math.max(G.maxLives, 3); // ensure baseline
+      const lives = parseInt(livesEl.textContent,10)-1;
+      livesEl.textContent = Math.max(0,lives);
+      this.player.inv = 1.2;
+      this.player.reset();
+      if(lives<=0){ this.end(false); }
+    }
+
+    end(win){
+      G.running=false; G.gameOver=true;
+      showOverlay(win? `You collected all bananas!` : `Oh no — the spiders & boomerangs got you!`, win);
+    }
+
+    update(dt){
+      if(!G.running) return;
+      this.player.update(dt,this);
+      for(const p of this.platforms){} // static
+      for(const b of this.bananas) b.update(dt);
+      for(const s of this.spiders) s.update(dt);
+
+      // spawn more boomerangs gradually
+      this.spawnTimer += dt;
+      if(this.spawnTimer>4){ this.spawnTimer=0; const dir=Math.random()<0.5?1:-1; this.boomerangs.push(new Boomerang(dir>0?-30:this.w+30, rand(120,420), dir)); }
+      for(const br of this.boomerangs) br.update(dt,this);
+      this.boomerangs = this.boomerangs.filter(b=>!b.dead);
+
+      // collisions: bananas
+      const pr = this.player.rect();
+      for(const bn of this.bananas){
+        if(!bn.taken && pr.intersects(bn.rect())){
+          bn.taken=true; G.score+=10; scoreEl.textContent=G.score;
+        }
+      }
+      // win if all bananas taken
+      if(this.bananas.every(b=>b.taken)){
+        this.end(true);
+      }
+
+      // collisions: enemies
+      if(this.player.inv<=0){
+        const hitEnemy = this.spiders.some(s=> pr.intersects(s.rect())) || this.boomerangs.some(b=> pr.intersects(b.rect()));
+        if(hitEnemy){ this.loseLife(); }
+      }
+    }
+
+    draw(c){
+      // sky gradient + stars
+      const w=this.w, h=this.h; c.clearRect(0,0,w,h);
+      const sky = c.createLinearGradient(0,0,0,h);
+      sky.addColorStop(0,'#0b163a'); sky.addColorStop(1,'#0a1531');
+      c.fillStyle=sky; c.fillRect(0,0,w,h);
+
+      // background hill silhouettes
+      c.fillStyle='#0d1a42'; c.beginPath();
+      c.moveTo(0,h-120); for(let x=0;x<=w;x+=40){ c.lineTo(x, h-120 - Math.sin((x/80))*18 - (x/w)*30); } c.lineTo(w,h); c.lineTo(0,h); c.closePath(); c.fill();
+
+      // platforms
+      for(const p of this.platforms) p.draw(c);
+
+      // bananas
+      for(const b of this.bananas) b.draw(c);
+
+      // spiders
+      for(const s of this.spiders) s.draw(c);
+
+      // boomerangs
+      for(const b of this.boomerangs) b.draw(c);
+
+      // player
+      this.player.draw(c);
+
+      // HUD shadows
+      c.fillStyle='rgba(0,0,0,.25)';
+      c.fillRect(0,0,w,10);
+    }
+  }
+
+  const world = new World();
+
+  function showOverlay(msg, win){
+    overlay.innerHTML = `<div class="card">\n      <h2>${win? '🍌 You win!': '💥 Game Over'}</h2>\n      <p>${msg}</p>\n      <p>Press <span class="kbd">R</span> to restart, or <span class="kbd">P</span> to ${G.running?'pause':'play'}.</p>\n    </div>`;
+    overlay.style.pointerEvents = 'none';
+    overlay.style.display = 'flex';
+  }
+  function hideOverlay(){ overlay.innerHTML=''; overlay.style.display='none'; }
+
+  function resetAll(){
+    G.score=0; scoreEl.textContent=0; livesEl.textContent=3; G.gameOver=false; G.running=true; world.resetLevel(1); hideOverlay();
+  }
+
+  pauseBtn.addEventListener('click', ()=>{ G.running=!G.running; if(!G.running) showOverlay('Paused. Press P or button to resume.'); else hideOverlay(); });
+  resetBtn.addEventListener('click', resetAll);
+
+  addEventListener('keydown', e=>{
+    if(e.code==='KeyP') { G.running=!G.running; if(!G.running) showOverlay('Paused. Press P to resume.'); else hideOverlay(); }
+    if(e.code==='KeyR') { resetAll(); }
+  });
+
+  // Main loop
+  let last=performance.now();
+  function loop(t){
+    const dt = Math.min(0.033, (t-last)/1000); last=t;
+    fitCanvas(); // keep crisp on resizes
+
+    world.update(dt);
+
+    // draw at internal resolution; canvas already in device pixels
+    world.draw(ctx);
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
