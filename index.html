@@ -115,65 +115,33 @@
       </div>
     </header>
 
-    <!-- MAIN GRID -->
-    <main class="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-3">
-
-      <!-- LEFT / CANVAS -->
-      <section class="panel p-3 relative">
-        <div class="relative">
-          <canvas id="game" width="800" height="500"></canvas>
-          <div class="vignette"></div>
-          <div id="overlay" class="overlay show">
-            <div class="card">
-              <h2 class="arcade text-3xl md:text-5xl glow mb-1">SIREN'S CALL</h2>
-              <p class="opacity-80 mb-3">After-the-siren shot to win the game. Beat the wind, nail the snap, stick the kick.</p>
-              <div class="text-left mx-auto max-w-md text-sm leading-relaxed mb-4">
-                <p><b>How to play:</b></p>
-                <p>• <b>First tap</b> stops the <b>Snap</b> needle — controls the ball's curve (left hook / clean / right banana).</p>
-                <p>• <b>Second tap</b> stops the <b>Power</b> bar — too soft falls short, too hard drifts in the wind.</p>
-                <p>• A <b>goal</b> keeps your streak alive and ramps the difficulty. A <b>behind</b> or <b>miss</b> ends it.</p>
-                <p class="mt-2">Desktop: <span class="kbd">Space</span> or <span class="kbd">Click</span>. Mobile: tap the canvas.</p>
-              </div>
-              <button id="startBtn" class="btn btn-pri arcade text-xl">START GAME</button>
-            </div>
-          </div>
-          <div id="flash" class="overlay"></div>
-        </div>
-        <div class="footer-hint">Press <span class="kbd">Space</span> / tap to kick · <span class="kbd">R</span> to restart</div>
-      </section>
-
-      <!-- RIGHT / DASHBOARD -->
-      <aside class="col-right grid gap-3">
-
-        <!-- MINIMAP -->
-        <div class="panel p-3">
-          <div class="flex items-center justify-between mb-2">
-            <span class="gauge-cap">Shot Map · Forward 50</span>
-            <span id="shotLabel" class="text-xs font-semibold text-amber-300">—</span>
-          </div>
-          <canvas id="minimap" width="280" height="200" class="rounded-md"></canvas>
-          <div class="mt-2 text-xs flex justify-between opacity-80">
-            <span>Dist <b id="distLabel" class="text-amber-200">—</b></span>
-            <span>Angle <b id="angleLabel" class="text-amber-200">—</b></span>
-            <span>Wind <b id="windLabel" class="text-amber-200">—</b></span>
+    <!-- PLAYFIELD -->
+    <main id="playfield" class="panel p-3 relative select-none">
+      <div class="relative">
+        <canvas id="game" width="800" height="500"></canvas>
+        <div class="vignette"></div>
+        <div id="overlay" class="overlay show">
+          <div class="card">
+            <h2 class="arcade text-3xl md:text-5xl glow mb-1">SIREN'S CALL</h2>
+            <p class="opacity-80 mb-4 text-sm">Stop the <b>Snap</b> in the green, then stop the <b>Power</b> in the bracket. Tap or press <span class="kbd">Space</span>.</p>
+            <button id="startBtn" class="btn btn-pri arcade text-xl">START GAME</button>
           </div>
         </div>
+        <div id="flash" class="overlay"></div>
+      </div>
 
-        <!-- GAUGES -->
-        <div class="panel p-3">
-          <div class="gauge-cap mb-1">Snap / Curve</div>
-          <canvas id="snapGauge" width="280" height="90" class="rounded-md"></canvas>
-
-          <div class="gauge-cap mb-1 mt-3">Power</div>
-          <canvas id="powerGauge" width="280" height="110" class="rounded-md"></canvas>
-
-          <div id="gaugeHint" class="text-xs mt-2 opacity-80 text-center">Tap or press Space to start the shot.</div>
+      <!-- THIN GAUGE STRIP -->
+      <div class="gauge-strip mt-3 grid grid-cols-2 gap-3">
+        <div>
+          <div class="flex items-center justify-between"><span class="gauge-cap">Snap</span><span id="shotLabel" class="text-[11px] font-semibold text-amber-300">—</span></div>
+          <canvas id="snapGauge" width="380" height="46" class="rounded-md mt-1"></canvas>
         </div>
-
-      </aside>
+        <div>
+          <div class="flex items-center justify-between"><span class="gauge-cap">Power</span><span id="gaugeHint" class="text-[11px] opacity-80">Tap to kick</span></div>
+          <canvas id="powerGauge" width="380" height="46" class="rounded-md mt-1"></canvas>
+        </div>
+      </div>
     </main>
-
-    <p class="footer-hint">Hit <b>100% power + dead-centre snap</b> for a Torpedo. Sherrin red. Maximum velocity.</p>
   </div>
 
 <script>
@@ -188,8 +156,6 @@
 // ---------- DOM ----------
 const canvas      = document.getElementById('game');
 const ctx         = canvas.getContext('2d');
-const mmCanvas    = document.getElementById('minimap');
-const mm          = mmCanvas.getContext('2d');
 const snapCanvas  = document.getElementById('snapGauge');
 const sg          = snapCanvas.getContext('2d');
 const powerCanvas = document.getElementById('powerGauge');
@@ -204,9 +170,6 @@ const elScore   = document.getElementById('score');
 const elStreak  = document.getElementById('streak');
 const elHigh    = document.getElementById('highScore');
 const elShot    = document.getElementById('shotLabel');
-const elDist    = document.getElementById('distLabel');
-const elAngle   = document.getElementById('angleLabel');
-const elWind    = document.getElementById('windLabel');
 const elHint    = document.getElementById('gaugeHint');
 
 // ---------- Const ----------
@@ -256,6 +219,7 @@ const game = {
   shakeT: 0,
   shotIntroT: 0,
   resultT: 0,
+  captureFlash: null,
 };
 elHigh.textContent = game.high;
 muteBtn.textContent = game.muted ? '🔇' : '🔊';
@@ -705,164 +669,75 @@ function drawBall(b, shotDist){
 }
 
 // ---------- Minimap ----------
-function drawMinimap(){
-  const w = mmCanvas.width, h = mmCanvas.height;
-  mm.clearRect(0,0,w,h);
-  // Background
-  mm.fillStyle = '#072154';
-  mm.fillRect(0,0,w,h);
-
-  // Forward 50 arc area: semicircle bottom-up, center at top middle
-  const cx = w/2, cy = 28;
-  const radius = 140;
-  mm.fillStyle = '#1f6b2c';
-  mm.beginPath();
-  mm.arc(cx, cy, radius, 0, Math.PI);
-  mm.lineTo(cx-radius, cy);
-  mm.fill();
-
-  // Grass stripes
-  mm.strokeStyle = 'rgba(255,255,255,.06)';
-  mm.lineWidth = 1;
-  for (let r=30; r<radius; r+=18){
-    mm.beginPath(); mm.arc(cx, cy, r, 0, Math.PI); mm.stroke();
-  }
-  // Arc line
-  mm.strokeStyle = 'rgba(255,255,255,.6)';
-  mm.lineWidth = 1.5;
-  mm.beginPath(); mm.arc(cx, cy, radius, 0, Math.PI); mm.stroke();
-
-  // Goal posts at top (cx, cy)
-  mm.fillStyle = '#fff';
-  mm.fillRect(cx - 14, cy - 5, 4, 4);   // left behind
-  mm.fillRect(cx - 6,  cy - 7, 3, 7);    // left main
-  mm.fillRect(cx + 3,  cy - 7, 3, 7);    // right main
-  mm.fillRect(cx + 10, cy - 5, 4, 4);   // right behind
-  mm.fillStyle = '#ffd24a';
-  mm.fillRect(cx - 6, cy - 1, 9, 2);    // goal line
-
-  // Render player position based on shot (if present)
-  if (game.shot){
-    const sh = game.shot;
-    // angle 0 = directly in front; +ve = right pocket, -ve = left pocket
-    const a = sh.angle * Math.PI / 180;
-    const dist = sh.dist;
-    const px = cx + Math.sin(a) * dist * 2.6;   // scale m -> px
-    const py = cy + Math.cos(a) * dist * 2.6;
-    // Line from goal to player
-    mm.strokeStyle = 'rgba(255,210,74,.5)';
-    mm.setLineDash([3,3]);
-    mm.beginPath(); mm.moveTo(cx, cy+1); mm.lineTo(px, py); mm.stroke();
-    mm.setLineDash([]);
-    // Player marker
-    mm.fillStyle = '#ff5c5c';
-    mm.beginPath(); mm.arc(px, py, 5, 0, Math.PI*2); mm.fill();
-    mm.strokeStyle = '#fff'; mm.lineWidth = 1.5;
-    mm.beginPath(); mm.arc(px, py, 5, 0, Math.PI*2); mm.stroke();
-
-    // Wind arrow
-    const wd = sign(sh.wind);
-    const wmag = Math.min(1, Math.abs(sh.wind)/40);
-    mm.strokeStyle = wmag > 0.6 ? '#ff7b3a' : '#ffd24a';
-    mm.lineWidth = 2;
-    const wcx = w - 28, wcy = h - 18;
-    mm.beginPath();
-    mm.moveTo(wcx - wd*14, wcy);
-    mm.lineTo(wcx + wd*14, wcy);
-    mm.lineTo(wcx + wd*8, wcy - 4);
-    mm.moveTo(wcx + wd*14, wcy);
-    mm.lineTo(wcx + wd*8, wcy + 4);
-    mm.stroke();
-    mm.fillStyle = '#fff';
-    mm.font = '10px system-ui';
-    mm.textAlign = 'right';
-    mm.fillText('wind', w-8, h-26);
-  } else {
-    // Idle marker at front centre
-    mm.fillStyle = 'rgba(255,255,255,.4)';
-    mm.beginPath(); mm.arc(cx, cy + 80, 4, 0, Math.PI*2); mm.fill();
-  }
-
-  // Border
-  mm.strokeStyle = '#2a3aa0';
-  mm.lineWidth = 1;
-  mm.strokeRect(0.5, 0.5, w-1, h-1);
+// ---------- Gauges ----------
+// Brief flash drawn over a gauge to confirm an input capture.
+function gaugeFlash(ctx2d, x, w, t, h){
+  if (!game.captureFlash) return;
+  const age = (performance.now() - game.captureFlash.t0) / 220;  // 220ms
+  if (age >= 1) { game.captureFlash = null; return; }
+  if (game.captureFlash.kind !== t) return;
+  const alpha = 1 - age;
+  ctx2d.save();
+  ctx2d.globalAlpha = alpha;
+  ctx2d.fillStyle = '#fff';
+  const px = x + game.captureFlash.pos * w;
+  ctx2d.fillRect(px - 3, 0, 6, h);
+  ctx2d.strokeStyle = '#fff';
+  ctx2d.lineWidth = 2;
+  ctx2d.strokeRect(px - 8 - age*14, 1, 16 + age*28, h - 2);
+  ctx2d.restore();
 }
 
-// ---------- Gauges ----------
 function drawSnapGauge(){
   const w = snapCanvas.width, h = snapCanvas.height;
   sg.clearRect(0,0,w,h);
-
-  // Background
   sg.fillStyle = '#091d52';
   sg.fillRect(0,0,w,h);
 
-  // Curve track (semi-arc)
-  const cx = w/2, cy = h + 10, r = 90;
-  // Track zones: outer = bad, mid = ok, center small = sweet
-  // We'll draw the arc colored by zones across angle from 200deg to 340deg (in radians)
-  const a0 = Math.PI * 1.1;   // 198 deg
-  const a1 = Math.PI * 1.9;   // 342 deg
-  const segs = 80;
+  const padL = 6, padR = 6;
+  const barW = w - padL - padR;
+  const barH = h - 18;
+  const x = padL, y = 4;
+
+  // Coloured zones (HOOK -> CLEAN -> BANANA), wider green sweet spot
+  const segs = 64;
   for (let i=0;i<segs;i++){
-    const t0 = i/segs, t1 = (i+1)/segs;
-    const ang0 = lerp(a0, a1, t0);
-    const ang1 = lerp(a0, a1, t1);
-    // distance from middle 0..1
-    const mid = (t0 + t1)/2;
-    const d = Math.abs(mid - 0.5)*2;  // 0 center, 1 edges
+    const mid = (i + 0.5)/segs;
+    const d = Math.abs(mid - 0.5)*2;
     let col;
-    if (d < 0.06) col = '#7be07b';        // sweet spot
-    else if (d < 0.2) col = '#d9f07b';
-    else if (d < 0.5) col = '#f0c449';
-    else if (d < 0.8) col = '#f08049';
+    if (d < 0.10) col = '#7be07b';
+    else if (d < 0.25) col = '#d9f07b';
+    else if (d < 0.55) col = '#f0c449';
+    else if (d < 0.82) col = '#f08049';
     else col = '#b8201d';
     sg.fillStyle = col;
-    sg.beginPath();
-    sg.arc(cx, cy, r, ang0, ang1);
-    sg.arc(cx, cy, r-16, ang1, ang0, true);
-    sg.closePath(); sg.fill();
+    sg.fillRect(x + (i/segs)*barW, y, barW/segs + 0.6, barH);
   }
 
   // Centre tick
   sg.strokeStyle = '#fff';
   sg.lineWidth = 1;
-  const midA = (a0+a1)/2;
   sg.beginPath();
-  sg.moveTo(cx + Math.cos(midA)*(r-18), cy + Math.sin(midA)*(r-18));
-  sg.lineTo(cx + Math.cos(midA)*(r+2), cy + Math.sin(midA)*(r+2));
+  sg.moveTo(x + barW/2, y - 2);
+  sg.lineTo(x + barW/2, y + barH + 2);
   sg.stroke();
-
-  // Side labels
-  sg.fillStyle = '#9ab0ff';
-  sg.font = 'bold 10px system-ui';
-  sg.textAlign = 'left';
-  sg.fillText('HOOK', 6, 16);
-  sg.textAlign = 'right';
-  sg.fillText('BANANA', w-6, 16);
-  sg.textAlign = 'center';
-  sg.fillStyle = '#fff';
-  sg.fillText('CLEAN', cx, 16);
 
   // Needle
-  let needleT;
-  if (game.state === STATE.AIM_SNAP) {
-    needleT = game.snap.t;          // 0..1
-  } else if (game.state === STATE.AIM_POWER || game.state === STATE.FLIGHT || game.state === STATE.RESULT) {
-    needleT = game.snap.value;
-  } else {
-    needleT = 0.5;
-  }
-  const nAng = lerp(a0, a1, needleT);
-  sg.strokeStyle = '#fff';
-  sg.lineWidth = 3;
-  sg.beginPath();
-  sg.moveTo(cx, cy);
-  sg.lineTo(cx + Math.cos(nAng)*(r+3), cy + Math.sin(nAng)*(r+3));
-  sg.stroke();
+  let nT;
+  if (game.state === STATE.AIM_SNAP) nT = game.snap.t;
+  else if (game.state === STATE.AIM_POWER || game.state === STATE.FLIGHT || game.state === STATE.RESULT) nT = game.snap.value;
+  else nT = 0.5;
   sg.fillStyle = '#fff';
-  sg.beginPath(); sg.arc(cx, cy, 4, 0, Math.PI*2); sg.fill();
+  sg.fillRect(x + nT*barW - 2, y - 3, 4, barH + 6);
+
+  // Labels
+  sg.fillStyle = '#9ab0ff';
+  sg.font = 'bold 9px system-ui';
+  sg.textAlign = 'left';   sg.fillText('HOOK',   x + 2,   h - 4);
+  sg.textAlign = 'center'; sg.fillStyle = '#fff'; sg.fillText('CLEAN', x + barW/2, h - 4);
+  sg.textAlign = 'right';  sg.fillStyle = '#9ab0ff'; sg.fillText('BANANA', x + barW - 2, h - 4);
+
+  gaugeFlash(sg, x, barW, 'snap', y + barH + 4);
 }
 
 function drawPowerGauge(){
@@ -871,14 +746,10 @@ function drawPowerGauge(){
   pg.fillStyle = '#091d52';
   pg.fillRect(0,0,w,h);
 
-  const padL = 16, padR = 64;
+  const padL = 6, padR = 44;
   const barW = w - padL - padR;
-  const barH = h - 28;
-  const x = padL, y = 14;
-
-  // Bar background
-  pg.fillStyle = '#0a1860';
-  pg.fillRect(x, y, barW, barH);
+  const barH = h - 18;
+  const x = padL, y = 4;
 
   // Gradient zones
   const grd = pg.createLinearGradient(x, 0, x+barW, 0);
@@ -890,15 +761,14 @@ function drawPowerGauge(){
   pg.fillStyle = grd;
   pg.fillRect(x, y, barW, barH);
 
-  // Sweet zone bracket for *this* shot's required power
+  // Sweet-zone bracket
   if (game.shot){
     const req = requiredPowerForShot(game.shot);
-    const zoneLo = req.lo, zoneHi = req.hi;
     pg.fillStyle = 'rgba(255,255,255,.25)';
-    pg.fillRect(x + zoneLo*barW, y-3, (zoneHi-zoneLo)*barW, barH+6);
+    pg.fillRect(x + req.lo*barW, y-2, (req.hi-req.lo)*barW, barH+4);
     pg.strokeStyle = '#fff';
     pg.lineWidth = 2;
-    pg.strokeRect(x + zoneLo*barW, y-3, (zoneHi-zoneLo)*barW, barH+6);
+    pg.strokeRect(x + req.lo*barW, y-2, (req.hi-req.lo)*barW, barH+4);
   }
 
   // Needle
@@ -907,26 +777,21 @@ function drawPowerGauge(){
   else if (game.state === STATE.FLIGHT || game.state === STATE.RESULT) pT = game.power.value;
   else pT = 0;
   pg.fillStyle = '#fff';
-  pg.fillRect(x + pT*barW - 2, y - 6, 4, barH+12);
-
-  // Tip glow
-  pg.fillStyle = pT > 0.95 ? '#ff5b1a' : '#ffd24a';
-  pg.beginPath(); pg.arc(x + pT*barW, y + barH/2, 6, 0, Math.PI*2); pg.fill();
+  pg.fillRect(x + pT*barW - 2, y - 3, 4, barH + 6);
 
   // Labels
   pg.fillStyle = '#9ab0ff';
-  pg.font = 'bold 10px system-ui';
-  pg.textAlign = 'left'; pg.fillText('SOFT', x, h-6);
-  pg.textAlign = 'right'; pg.fillText('TORP', x+barW, h-6);
+  pg.font = 'bold 9px system-ui';
+  pg.textAlign = 'left';  pg.fillText('SOFT', x + 2, h - 4);
+  pg.textAlign = 'right'; pg.fillText('TORP', x + barW - 2, h - 4);
 
   // Numeric readout
   pg.fillStyle = '#fff';
-  pg.font = 'bold 18px system-ui, sans-serif';
+  pg.font = 'bold 14px system-ui, sans-serif';
   pg.textAlign = 'left';
-  pg.fillText(`${Math.round(pT*100)}%`, x+barW + 10, y + barH/2 + 6);
-  pg.fillStyle = '#9ab0ff';
-  pg.font = '10px system-ui';
-  pg.fillText('POWER', x+barW + 10, y + barH/2 + 20);
+  pg.fillText(`${Math.round(pT*100)}%`, x + barW + 6, y + barH/2 + 5);
+
+  gaugeFlash(pg, x, barW, 'power', y + barH + 4);
 }
 
 // Each shot has a required power band scaled to its distance.
@@ -948,19 +813,18 @@ function requiredPowerForShot(shot){
 function newShot(){
   game.shot = generateShot(game.streak);
   game.ball = null;
-  game.snap = { t: 0, v: 1.6 + Math.min(1.4, game.streak*0.1), value: 0.5 };
-  game.power = { t: 0, v: 1.5 + Math.min(1.6, game.streak*0.12), value: 0, dir: 1 };
+  game.snap = { t: 0, v: 1.05 + Math.min(0.9, game.streak*0.07), value: 0.5 };
+  game.power = { t: 0, v: 1.0 + Math.min(1.1, game.streak*0.08), value: 0, dir: 1 };
   game.flashTimer = 0;
   game.flashText = '';
   game.particles.length = 0;
   game.shotIntroT = 0;
   game.state = STATE.SHOT_INTRO;
-  elShot.textContent = game.shot.name;
-  elDist.textContent = `${Math.round(game.shot.dist)}m`;
+  const distStr = `${Math.round(game.shot.dist)}m`;
   const sideStr = game.shot.angle === 0 ? '0°' : `${Math.abs(Math.round(game.shot.angle))}° ${game.shot.side<0?'L':'R'}`;
-  elAngle.textContent = sideStr;
-  elWind.textContent  = `${Math.round(game.shot.windMag)} ${game.shot.wind<0?'←':'→'}`;
-  elHint.textContent  = 'SIREN! Tap or press Space — stop the snap needle.';
+  const windStr = `${Math.round(game.shot.windMag)}${game.shot.wind<0?'←':'→'}`;
+  elShot.textContent = `${distStr} · ${sideStr} · ${windStr}`;
+  elHint.textContent = 'Stop the SNAP!';
   Audio.siren();
 }
 
@@ -1264,19 +1128,21 @@ function handleAction(){
   if (game.state === STATE.SHOT_INTRO){
     // Allow skip-forward to the snap gauge if player is ready.
     game.state = STATE.AIM_SNAP;
-    elHint.textContent = 'Stop the SNAP — get it in the green centre.';
+    elHint.textContent = 'Stop the SNAP!';
     Audio.tick(700);
     return;
   }
   if (game.state === STATE.AIM_SNAP){
     game.snap.value = game.snap.t;
+    game.captureFlash = { kind:'snap',  pos: game.snap.t,  t0: performance.now() };
     game.state = STATE.AIM_POWER;
-    elHint.textContent = 'Now the POWER — stop inside the bracket.';
+    elHint.textContent = 'Stop the POWER!';
     Audio.tick(900);
     return;
   }
   if (game.state === STATE.AIM_POWER){
     game.power.value = game.power.t;
+    game.captureFlash = { kind:'power', pos: game.power.t, t0: performance.now() };
     Audio.tick(1100);
     commitKick();
     return;
@@ -1400,19 +1266,27 @@ function draw(){
 
   ctx.restore();
 
-  // Side panels
-  drawMinimap();
+  // Gauge strip
   drawSnapGauge();
   drawPowerGauge();
 }
 
 // ---------- Input ----------
 function bindInputs(){
-  canvas.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    handleAction();
-  });
-  // also allow tap/click anywhere on the canvas panel
+  // Capture pointer events on the entire playfield (canvas + gauges + padding)
+  // so taps anywhere inside the panel register, not just on the canvas pixels.
+  const playfield = document.getElementById('playfield');
+  const tapZones = [playfield, canvas, snapCanvas, powerCanvas];
+  for (const el of tapZones){
+    if (!el) continue;
+    el.addEventListener('pointerdown', e => {
+      // Ignore taps on the start/again buttons or the mute control
+      const tag = e.target && e.target.closest ? e.target.closest('button') : null;
+      if (tag) return;
+      e.preventDefault();
+      handleAction();
+    });
+  }
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.code === 'Enter') {
       e.preventDefault();
