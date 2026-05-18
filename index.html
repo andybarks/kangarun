@@ -2,406 +2,1448 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>KangaRun — tiny platformer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Siren's Call — The Boundary Snap Challenge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root{
-      --bg:#0b1020; --panel:#0e1530; --accent:#ffd54a; --accent2:#91e0ff; --good:#70e07e; --danger:#ff7b7b;
-      --text:#e8eefc;
+      --stadium:#020F81;
+      --stadium-2:#0a1a9e;
+      --grass:#2d8a3e;
+      --grass-2:#1f6b2c;
+      --sherrin:#e8b73a;
+      --sherrin-2:#b8201d;
+      --chalk:#ffffff;
+      --line:#2d3a8c;
+      --warn:#ff7b3a;
+      --ok:#7be07b;
     }
     *{box-sizing:border-box}
-    html,body{height:100%;}
+    html,body{height:100%; margin:0; -webkit-tap-highlight-color:transparent;}
     body{
-      margin:0; font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-      background: radial-gradient(1200px 800px at 70% -20%, #1a2a6c 0%, #0b1020 60%) fixed;
-      color:var(--text);
-      display:flex; align-items:center; justify-content:center;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color:#eaf0ff;
+      background:
+        radial-gradient(1400px 900px at 80% -10%, #1f3bd0 0%, var(--stadium) 40%, #01083a 100%) fixed;
+      overflow-x:hidden;
     }
-    .wrap{width:min(100vw,1000px); padding:12px;}
-    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px}
-    h1{font-size:clamp(18px,2.6vw,24px); margin:0; letter-spacing:.5px}
-    .panel{background:linear-gradient(180deg, #0f1735, #0a0f25); border:1px solid #1f2a56; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,.35);}
-    .hud{display:flex; gap:16px; align-items:center; padding:8px 12px;}
-    .hud .pill{background:#0a122c; border:1px solid #1b2754; padding:6px 10px; border-radius:999px; font-size:14px;}
-    .hud b{color:var(--accent)}
-    .btn{appearance:none; border:1px solid #2a376e; background:#0e1a3b; color:#e8eefc; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600}
-    .btn:hover{filter:brightness(1.15)}
-    .canvasWrap{position:relative}
-    canvas{display:block; width:100%; height:auto; border-radius:14px; border:1px solid #1f2a56; background:#142040}
-    #overlay{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none}
-    .card{max-width:720px; padding:16px 20px; text-align:center; background:rgba(5,8,18,.82); border:1px solid #263369; border-radius:16px; backdrop-filter: blur(6px);}
-    .card h2{margin:.2rem 0 .5rem 0}
-    .card p{margin:.2rem 0 .6rem 0; line-height:1.35}
-    .kbd{display:inline-grid; grid-auto-flow:column; gap:6px; align-items:center; background:#0b1330; border:1px solid #253169; padding:4px 10px; border-radius:10px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:13px}
-    footer{margin-top:8px; opacity:.85; font-size:12px; text-align:center}
-    .heart{color:var(--danger)}
+    .arcade { font-family: "Impact","Haettenschweiler","Arial Narrow Bold",sans-serif; letter-spacing:1px; }
+    .panel{
+      background: linear-gradient(180deg, rgba(10,22,90,.85), rgba(4,10,52,.92));
+      border:1px solid #2a3aa0;
+      border-radius: 16px;
+      box-shadow: 0 12px 38px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .pill{ background:#0a122c; border:1px solid #2a3aa0; border-radius:999px; padding:5px 12px; font-size:13px; }
+    .pill b{ color:var(--sherrin); }
+    .btn{
+      appearance:none; border:1px solid #3247c2; background:linear-gradient(180deg,#1a2cab,#10208a);
+      color:#fff; padding:10px 16px; border-radius:12px; font-weight:700; cursor:pointer;
+      box-shadow: 0 4px 0 #06105e, 0 6px 18px rgba(0,0,0,.4); transition: transform .07s ease, box-shadow .07s ease;
+    }
+    .btn:hover{ filter:brightness(1.1); }
+    .btn:active{ transform: translateY(2px); box-shadow:0 2px 0 #06105e; }
+    .btn-pri{ background:linear-gradient(180deg,#f0c449,#d6a01c); color:#1b1300; border-color:#a37c14; box-shadow:0 4px 0 #6e5410, 0 6px 18px rgba(0,0,0,.4); }
+    .btn-pri:active{ box-shadow:0 2px 0 #6e5410; }
+    canvas{ display:block; width:100%; height:auto; border-radius:14px; background:#0b1a44; touch-action: manipulation; }
+    .gauge-cap{ font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#9ab0ff;}
+    .glow{ text-shadow: 0 0 12px rgba(255,255,255,.45), 0 0 32px rgba(232,183,58,.6); }
+    .overlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
+    .overlay.show{ pointer-events:auto; }
+    .card{
+      max-width: 680px; padding: 22px 26px; text-align:center;
+      background: rgba(2,8,40,.86);
+      border:1px solid #3247c2; border-radius:18px; backdrop-filter: blur(6px);
+    }
+    .goal-flash{
+      font-size: clamp(60px, 12vw, 160px); color:#fff;
+      text-shadow: 0 0 18px #ffd24a, 0 0 42px #ff7b3a, 0 8px 0 #b8201d;
+      animation: pop .9s ease-out forwards;
+    }
+    @keyframes pop{
+      0%   { transform: scale(.5) rotate(-6deg); opacity:0;}
+      30%  { transform: scale(1.15) rotate(2deg); opacity:1;}
+      70%  { transform: scale(1.0) rotate(-1deg); opacity:1;}
+      100% { transform: scale(1.1) rotate(0); opacity:0;}
+    }
+    .scoreflash{
+      font-size: clamp(36px, 7vw, 84px); color:#fff;
+      text-shadow: 0 0 14px rgba(255,255,255,.6), 0 6px 0 #b8201d;
+      animation: pop 1s ease-out forwards;
+    }
+    .torp-warn{
+      color:#ffd24a; font-weight:900;
+      text-shadow:0 0 8px #ff5b1a, 0 0 24px #ff2a00;
+      animation: pulse 0.6s infinite alternate;
+    }
+    @keyframes pulse{ from{opacity:.55} to{opacity:1} }
+    .mute-btn{ width:44px; height:44px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; font-size:20px; }
+    .field-grad-stop-1{ stop-color:#2d8a3e; }
+    @media (max-width: 880px){
+      .col-right { order: 2; }
+    }
+    .kbd{
+      display:inline-grid; grid-auto-flow:column; gap:6px; align-items:center;
+      background:#0b1330; border:1px solid #253169; padding:3px 10px; border-radius:8px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px;
+    }
+    .footer-hint{ font-size:12px; opacity:.75; text-align:center; padding:8px 0 16px; }
+    .vignette{ pointer-events:none; position:absolute; inset:0; border-radius:14px;
+      box-shadow: inset 0 0 80px rgba(0,0,0,.55); }
+    /* Confetti pieces drawn on canvas, no DOM */
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>🦘 KangaRun — bananas, spiders & boomerangs</h1>
-      <div class="panel hud" id="hud">
-        <div class="pill">Score: <b id="score">0</b></div>
-        <div class="pill">Lives: <b id="lives">3</b></div>
-        <div class="pill">Level: <b id="level">1</b></div>
-        <button class="btn" id="btnPause" aria-label="Pause/Resume (P)">⏯︎ Pause (P)</button>
-        <button class="btn" id="btnReset" aria-label="Restart (R)">↺ Reset (R)</button>
+  <div class="max-w-[1180px] mx-auto p-3 md:p-5">
+
+    <!-- HEADER -->
+    <header class="panel flex flex-wrap items-center gap-3 px-4 py-3 md:py-4 mb-3">
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background: radial-gradient(circle at 30% 30%, #f0c449, #b8201d 70%); border:2px solid #fff; box-shadow:0 0 18px rgba(255,180,40,.55);">
+          <span class="text-lg arcade">⚉</span>
+        </div>
+        <div class="min-w-0">
+          <h1 class="arcade text-xl md:text-3xl glow leading-none truncate">SIREN'S CALL</h1>
+          <p class="text-xs md:text-sm opacity-80 -mt-0.5">The Boundary Snap Challenge</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="pill">High <b id="highScore">0</b></div>
+        <div class="pill">Streak <b id="streak">0</b></div>
+        <div class="pill">Score <b id="score">0</b></div>
+        <button id="muteBtn" class="btn mute-btn" title="Mute / Unmute" aria-label="Mute">🔊</button>
       </div>
     </header>
 
-    <div class="panel canvasWrap">
-      <canvas id="game" width="960" height="540" aria-label="Game canvas"></canvas>
-      <div id="overlay"></div>
-    </div>
-    <footer>
-      Built with ❤️ using plain HTML5 Canvas. Controls: <span class="kbd">←/A</span> <span class="kbd">→/D</span> to run, <span class="kbd">Space/↑/W</span> to jump, <span class="kbd">P</span> pause, <span class="kbd">R</span> restart.
-    </footer>
+    <!-- MAIN GRID -->
+    <main class="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-3">
+
+      <!-- LEFT / CANVAS -->
+      <section class="panel p-3 relative">
+        <div class="relative">
+          <canvas id="game" width="800" height="500"></canvas>
+          <div class="vignette"></div>
+          <div id="overlay" class="overlay show">
+            <div class="card">
+              <h2 class="arcade text-3xl md:text-5xl glow mb-1">SIREN'S CALL</h2>
+              <p class="opacity-80 mb-3">After-the-siren shot to win the game. Beat the wind, nail the snap, stick the kick.</p>
+              <div class="text-left mx-auto max-w-md text-sm leading-relaxed mb-4">
+                <p><b>How to play:</b></p>
+                <p>• <b>First tap</b> stops the <b>Snap</b> needle — controls the ball's curve (left hook / clean / right banana).</p>
+                <p>• <b>Second tap</b> stops the <b>Power</b> bar — too soft falls short, too hard drifts in the wind.</p>
+                <p>• A <b>goal</b> keeps your streak alive and ramps the difficulty. A <b>behind</b> or <b>miss</b> ends it.</p>
+                <p class="mt-2">Desktop: <span class="kbd">Space</span> or <span class="kbd">Click</span>. Mobile: tap the canvas.</p>
+              </div>
+              <button id="startBtn" class="btn btn-pri arcade text-xl">START GAME</button>
+            </div>
+          </div>
+          <div id="flash" class="overlay"></div>
+        </div>
+        <div class="footer-hint">Press <span class="kbd">Space</span> / tap to kick · <span class="kbd">R</span> to restart</div>
+      </section>
+
+      <!-- RIGHT / DASHBOARD -->
+      <aside class="col-right grid gap-3">
+
+        <!-- MINIMAP -->
+        <div class="panel p-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="gauge-cap">Shot Map · Forward 50</span>
+            <span id="shotLabel" class="text-xs font-semibold text-amber-300">—</span>
+          </div>
+          <canvas id="minimap" width="280" height="200" class="rounded-md"></canvas>
+          <div class="mt-2 text-xs flex justify-between opacity-80">
+            <span>Dist <b id="distLabel" class="text-amber-200">—</b></span>
+            <span>Angle <b id="angleLabel" class="text-amber-200">—</b></span>
+            <span>Wind <b id="windLabel" class="text-amber-200">—</b></span>
+          </div>
+        </div>
+
+        <!-- GAUGES -->
+        <div class="panel p-3">
+          <div class="gauge-cap mb-1">Snap / Curve</div>
+          <canvas id="snapGauge" width="280" height="90" class="rounded-md"></canvas>
+
+          <div class="gauge-cap mb-1 mt-3">Power</div>
+          <canvas id="powerGauge" width="280" height="110" class="rounded-md"></canvas>
+
+          <div id="gaugeHint" class="text-xs mt-2 opacity-80 text-center">Tap or press Space to start the shot.</div>
+        </div>
+
+      </aside>
+    </main>
+
+    <p class="footer-hint">Hit <b>100% power + dead-centre snap</b> for a Torpedo. Sherrin red. Maximum velocity.</p>
   </div>
 
 <script>
-(function(){
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const overlay = document.getElementById('overlay');
-  const scoreEl = document.getElementById('score');
-  const livesEl = document.getElementById('lives');
-  const levelEl = document.getElementById('level');
-  const pauseBtn = document.getElementById('btnPause');
-  const resetBtn = document.getElementById('btnReset');
+/* =====================================================================
+   SIREN'S CALL — Boundary Snap Challenge
+   Single-file vanilla JS arcade game.
+   ===================================================================== */
 
-  // Hi‑DPI scaling
-  function fitCanvas(){
-    const dpr = Math.min(window.devicePixelRatio||1, 2);
-    const rect = canvas.getBoundingClientRect();
-    const w = Math.round(rect.width * dpr);
-    const h = Math.round(rect.height * dpr);
-    if(canvas.width!==w || canvas.height!==h){
-      canvas.width=w; canvas.height=h;
+(() => {
+'use strict';
+
+// ---------- DOM ----------
+const canvas      = document.getElementById('game');
+const ctx         = canvas.getContext('2d');
+const mmCanvas    = document.getElementById('minimap');
+const mm          = mmCanvas.getContext('2d');
+const snapCanvas  = document.getElementById('snapGauge');
+const sg          = snapCanvas.getContext('2d');
+const powerCanvas = document.getElementById('powerGauge');
+const pg          = powerCanvas.getContext('2d');
+
+const overlay   = document.getElementById('overlay');
+const flashEl   = document.getElementById('flash');
+const startBtn  = document.getElementById('startBtn');
+const muteBtn   = document.getElementById('muteBtn');
+
+const elScore   = document.getElementById('score');
+const elStreak  = document.getElementById('streak');
+const elHigh    = document.getElementById('highScore');
+const elShot    = document.getElementById('shotLabel');
+const elDist    = document.getElementById('distLabel');
+const elAngle   = document.getElementById('angleLabel');
+const elWind    = document.getElementById('windLabel');
+const elHint    = document.getElementById('gaugeHint');
+
+// ---------- Const ----------
+const W = canvas.width, H = canvas.height;
+const COLOR = {
+  stadium: '#020F81',
+  grass:   '#2d8a3e',
+  grassDk: '#1f6b2c',
+  grassLt: '#3aa64e',
+  chalk:   '#ffffff',
+  post:    '#ffffff',
+  postDk:  '#dde5ff',
+  sherrin: '#e8b73a',
+  sherrinDk:'#b8201d',
+  red:     '#ff2a16',
+  sky1:    '#0a1a6e',
+  sky2:    '#244ad4',
+  shadow:  'rgba(0,0,0,.35)',
+};
+
+const SHOT_TYPES = [
+  { name:'Straight Shot',  dist:[20,35], angle:[0,10],   wind:[0,10]  },
+  { name:'45° Arc',         dist:[35,50], angle:[30,50],  wind:[10,25] },
+  { name:'Boundary Snap',   dist:[15,30], angle:[75,88],  wind:[25,40] },
+];
+
+const STATE = {
+  IDLE:'idle', SHOT_INTRO:'intro', AIM_SNAP:'snap', AIM_POWER:'power',
+  FLIGHT:'flight', RESULT:'result', GAMEOVER:'gameover'
+};
+
+// ---------- Game State ----------
+const game = {
+  state: STATE.IDLE,
+  score: 0,
+  streak: 0,
+  high: +(localStorage.getItem('sirensCall.high') || 0),
+  muted: localStorage.getItem('sirensCall.muted') === '1',
+  shot: null,         // active shot scenario
+  snap: { t:0, v:1, value:0 },         // oscillator 0..1, value when stopped
+  power:{ t:0, v:1.3, value:0, dir:1 },// oscillator 0..1, value when stopped
+  ball: null,
+  particles: [],
+  flashTimer: 0,
+  flashText: '',
+  flashSub: '',
+  shakeT: 0,
+  shotIntroT: 0,
+  resultT: 0,
+};
+elHigh.textContent = game.high;
+muteBtn.textContent = game.muted ? '🔇' : '🔊';
+
+// ---------- Audio (Web Audio API) ----------
+const Audio = (() => {
+  let actx = null;
+  function ensure(){
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e){ actx = null; }
     }
-    scale = dpr;
+    if (actx && actx.state === 'suspended') actx.resume();
+    return actx;
   }
-  let scale = 1; fitCanvas();
-  addEventListener('resize', fitCanvas);
+  function noiseBuffer(seconds){
+    const ac = ensure(); if (!ac) return null;
+    const buf = ac.createBuffer(1, ac.sampleRate * seconds, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i=0;i<d.length;i++) d[i] = Math.random()*2 - 1;
+    return buf;
+  }
+  function siren(){
+    if (game.muted) return;
+    const ac = ensure(); if (!ac) return;
+    const t0 = ac.currentTime;
+    const out = ac.createGain();
+    out.gain.value = 0.0;
+    out.gain.setValueAtTime(0.0, t0);
+    out.gain.linearRampToValueAtTime(0.18, t0+0.1);
+    out.gain.linearRampToValueAtTime(0.18, t0+0.8);
+    out.gain.linearRampToValueAtTime(0.0, t0+1.05);
+    out.connect(ac.destination);
+    for (const f of [220, 245]) {
+      const o = ac.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f, t0);
+      o.frequency.linearRampToValueAtTime(f*1.04, t0+1.0);
+      const g = ac.createGain(); g.gain.value = 0.5;
+      o.connect(g); g.connect(out);
+      o.start(t0); o.stop(t0+1.1);
+    }
+  }
+  function kickThud(){
+    if (game.muted) return;
+    const ac = ensure(); if (!ac) return;
+    const t0 = ac.currentTime;
+    const buf = noiseBuffer(0.18);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const bp = ac.createBiquadFilter(); bp.type='lowpass'; bp.frequency.value=420;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0, t0);
+    g.gain.linearRampToValueAtTime(0.45, t0+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+0.17);
+    src.connect(bp); bp.connect(g); g.connect(ac.destination);
+    src.start(t0); src.stop(t0+0.2);
+    // Pitched thump component
+    const o = ac.createOscillator(); o.type='sine';
+    o.frequency.setValueAtTime(160, t0); o.frequency.exponentialRampToValueAtTime(60, t0+0.18);
+    const og = ac.createGain(); og.gain.setValueAtTime(0.5, t0);
+    og.gain.exponentialRampToValueAtTime(0.0001, t0+0.2);
+    o.connect(og); og.connect(ac.destination);
+    o.start(t0); o.stop(t0+0.22);
+  }
+  function tick(freq=900){
+    if (game.muted) return;
+    const ac = ensure(); if (!ac) return;
+    const t0 = ac.currentTime;
+    const o = ac.createOscillator(); o.type='square'; o.frequency.value=freq;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0, t0);
+    g.gain.linearRampToValueAtTime(0.07, t0+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+0.06);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t0); o.stop(t0+0.08);
+  }
+  function crowdCheer(){
+    if (game.muted) return;
+    const ac = ensure(); if (!ac) return;
+    const t0 = ac.currentTime;
+    const buf = noiseBuffer(2.0);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const bp = ac.createBiquadFilter(); bp.type='bandpass';
+    bp.frequency.setValueAtTime(700, t0);
+    bp.frequency.linearRampToValueAtTime(1500, t0+0.6);
+    bp.Q.value = 0.9;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0, t0);
+    g.gain.linearRampToValueAtTime(0.32, t0+0.5);
+    g.gain.linearRampToValueAtTime(0.22, t0+1.5);
+    g.gain.linearRampToValueAtTime(0.0, t0+2.0);
+    src.connect(bp); bp.connect(g); g.connect(ac.destination);
+    src.start(t0); src.stop(t0+2.05);
+    // High whoop
+    const o = ac.createOscillator(); o.type='triangle';
+    o.frequency.setValueAtTime(440, t0+0.05);
+    o.frequency.linearRampToValueAtTime(660, t0+0.5);
+    const og = ac.createGain(); og.gain.value = 0;
+    og.gain.linearRampToValueAtTime(0.12, t0+0.2);
+    og.gain.linearRampToValueAtTime(0.0, t0+1.0);
+    o.connect(og); og.connect(ac.destination);
+    o.start(t0+0.05); o.stop(t0+1.05);
+  }
+  function missSigh(){
+    if (game.muted) return;
+    const ac = ensure(); if (!ac) return;
+    const t0 = ac.currentTime;
+    const o = ac.createOscillator(); o.type='sawtooth';
+    o.frequency.setValueAtTime(420, t0);
+    o.frequency.exponentialRampToValueAtTime(95, t0+0.9);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0, t0);
+    g.gain.linearRampToValueAtTime(0.18, t0+0.1);
+    g.gain.linearRampToValueAtTime(0.0, t0+1.0);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t0); o.stop(t0+1.05);
 
-  // Utilities
-  const rand = (a,b)=> a + Math.random()*(b-a);
-  const clamp = (v,a,b)=> Math.max(a, Math.min(b,v));
-  const sign = (v)=> v<0?-1:1;
+    // Add a low buzz under it
+    const o2 = ac.createOscillator(); o2.type='square';
+    o2.frequency.setValueAtTime(120, t0); o2.frequency.exponentialRampToValueAtTime(50, t0+0.9);
+    const g2 = ac.createGain(); g2.gain.setValueAtTime(0.0,t0);
+    g2.gain.linearRampToValueAtTime(0.07, t0+0.15);
+    g2.gain.linearRampToValueAtTime(0.0, t0+1.0);
+    o2.connect(g2); g2.connect(ac.destination);
+    o2.start(t0); o2.stop(t0+1.05);
+  }
+  function thunk(){
+    if (game.muted) return;
+    const ac = ensure(); if (!ac) return;
+    const t0 = ac.currentTime;
+    const o = ac.createOscillator(); o.type='triangle';
+    o.frequency.setValueAtTime(180, t0); o.frequency.exponentialRampToValueAtTime(80, t0+0.2);
+    const g = ac.createGain(); g.gain.setValueAtTime(0.4, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+0.25);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t0); o.stop(t0+0.26);
+  }
+  return { ensure, siren, kickThud, tick, crowdCheer, missSigh, thunk };
+})();
 
-  // Input
-  const keys = new Set();
-  addEventListener('keydown', e=>{ if(['ArrowUp','ArrowLeft','ArrowRight','Space','KeyA','KeyD','KeyW','KeyP','KeyR'].includes(e.code)) e.preventDefault(); keys.add(e.code); });
-  addEventListener('keyup', e=>{ keys.delete(e.code); });
+// ---------- Helpers ----------
+const rand = (a,b) => a + Math.random()*(b-a);
+const randInt = (a,b) => Math.floor(rand(a,b+1));
+const clamp = (v,a,b) => Math.max(a, Math.min(b,v));
+const lerp = (a,b,t) => a + (b-a)*t;
+const sign = (v) => v < 0 ? -1 : 1;
 
-  // Game state
-  const G = {
-    gravity: 2000,
-    moveSpeed: 260,
-    jump: 620,
-    friction: 0.86,
-    maxLives: 3,
-    running: true,
-    gameOver: false,
-    level: 1,
-    score: 0,
-    bananasInLevel: 0,
+// Smooth easing
+const easeOut = t => 1 - Math.pow(1-t, 2);
+
+// ---------- Shot generation ----------
+function chooseShotTier(streak){
+  // Weighted bias: streak 0 -> mostly straight; streak 5+ -> mostly hard.
+  const s = streak;
+  const wStraight = Math.max(0.05, 1.0 - s*0.15);
+  const wArc      = 0.4 + Math.min(0.4, s*0.06);
+  const wSnap     = 0.15 + Math.min(0.65, s*0.10);
+  const total = wStraight + wArc + wSnap;
+  let r = Math.random()*total;
+  if (r < wStraight) return 0;
+  r -= wStraight;
+  if (r < wArc) return 1;
+  return 2;
+}
+function generateShot(streak){
+  const tierIdx = chooseShotTier(streak);
+  const tier = SHOT_TYPES[tierIdx];
+  const dist  = rand(tier.dist[0], tier.dist[1]);
+  const angleMag = rand(tier.angle[0], tier.angle[1]);
+  const side = Math.random() < 0.5 ? -1 : 1;     // left or right pocket
+  const angle = angleMag * side;                  // negative = left of goals
+  const windMag = rand(tier.wind[0], tier.wind[1]);
+  const windDir = Math.random() < 0.5 ? -1 : 1;
+  return {
+    tier: tierIdx,
+    name: tier.name,
+    dist,                  // metres
+    angle,                 // degrees, signed
+    angleMag,
+    side,
+    wind: windMag * windDir, // signed km/h, +ve pushes right (positive x)
+    windMag,
+  };
+}
+
+// ---------- Field perspective drawing ----------
+const FIELD = {
+  horizonY: 100,
+  groundBottomY: H - 20,
+  centerX: W/2,
+  goalSpacing: 6.4,         // metres between the two big posts
+  behindOffset: 6.4,        // metres from main post to behind post (outside)
+};
+
+// Map a 3D point (x metres lateral from center, y metres altitude, z metres distance from goal) to screen
+// shotDistance = how far away kicker is (so z ranges from shotDistance->0)
+function project(xMet, yMet, zMet, shotDistance) {
+  // t goes 0 at kicker (close to camera) to 1 at goal posts (far)
+  const t = clamp(1 - zMet / shotDistance, 0, 1);
+  // ground line - far is higher up on screen
+  const groundY = lerp(FIELD.groundBottomY, FIELD.horizonY+30, t);
+  // perspective scale (camera scale)
+  const scale = lerp(1.0, 0.30, t);
+  // horizontal spread scale - 1 metre at distance == this many pixels
+  const pxPerMeterX = lerp(22, 9, t);
+  const screenX = FIELD.centerX + xMet * pxPerMeterX;
+  // altitude scale - pixels per metre vertically
+  const pxPerMeterY = lerp(14, 7, t);
+  const screenY = groundY - yMet * pxPerMeterY;
+  return { sx: screenX, sy: screenY, scale, groundY, t, pxPerMeterX, pxPerMeterY };
+}
+
+function drawSky(){
+  // Sky gradient above the horizon
+  const g = ctx.createLinearGradient(0, 0, 0, FIELD.horizonY+10);
+  g.addColorStop(0, '#040c4a');
+  g.addColorStop(1, '#1c39b8');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, FIELD.horizonY+10);
+
+  // Stadium silhouette behind the goals
+  ctx.fillStyle = '#0a1660';
+  ctx.beginPath();
+  ctx.moveTo(0, FIELD.horizonY+10);
+  for (let x=0; x<=W; x+=20){
+    const y = FIELD.horizonY - 18 + Math.sin(x*0.045)*4 + Math.cos(x*0.013)*8;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, FIELD.horizonY+10);
+  ctx.closePath();
+  ctx.fill();
+
+  // Stand lights
+  for (let i=0;i<6;i++){
+    const x = 60 + i*(W-120)/5;
+    ctx.fillStyle = '#fff7c2';
+    ctx.beginPath(); ctx.arc(x, FIELD.horizonY-8, 1.6, 0, Math.PI*2); ctx.fill();
+    const grd = ctx.createRadialGradient(x, FIELD.horizonY-8, 0, x, FIELD.horizonY-8, 24);
+    grd.addColorStop(0, 'rgba(255,247,194,.35)');
+    grd.addColorStop(1, 'rgba(255,247,194,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(x, FIELD.horizonY-8, 24, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Crowd noise dots
+  for (let i=0;i<140;i++){
+    const x = (i*97 + 13)%W;
+    const y = FIELD.horizonY - 24 + ((i*7)%18);
+    ctx.fillStyle = `rgba(${200 + (i%50)}, ${200 + (i*3%50)}, 255, .25)`;
+    ctx.fillRect(x, y, 1.5, 1.5);
+  }
+}
+
+function drawGround(){
+  // Ground as a trapezoid: from far line up at horizon to wide at bottom.
+  // Layered grass stripes for perspective.
+  const stripes = 14;
+  for (let i = stripes; i >= 0; i--){
+    const t1 = i / stripes;
+    const t2 = (i-1) / stripes;
+    const y1 = lerp(FIELD.groundBottomY, FIELD.horizonY+30, t1);
+    const y2 = lerp(FIELD.groundBottomY, FIELD.horizonY+30, Math.max(0,t2));
+    const c1 = i%2===0 ? COLOR.grass : COLOR.grassDk;
+    ctx.fillStyle = c1;
+    // Trapezoid edges
+    const halfW1 = lerp(W*0.55, W*0.10, t1);
+    const halfW2 = lerp(W*0.55, W*0.10, Math.max(0,t2));
+    ctx.beginPath();
+    ctx.moveTo(FIELD.centerX - halfW1, y1);
+    ctx.lineTo(FIELD.centerX + halfW1, y1);
+    ctx.lineTo(FIELD.centerX + halfW2, y2);
+    ctx.lineTo(FIELD.centerX - halfW2, y2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Side dark falloff
+  ctx.fillStyle = '#04106a';
+  ctx.beginPath();
+  ctx.moveTo(0, FIELD.horizonY+10);
+  ctx.lineTo(FIELD.centerX - W*0.10, FIELD.horizonY+30);
+  ctx.lineTo(FIELD.centerX - W*0.55, FIELD.groundBottomY);
+  ctx.lineTo(0, FIELD.groundBottomY);
+  ctx.closePath(); ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(W, FIELD.horizonY+10);
+  ctx.lineTo(FIELD.centerX + W*0.10, FIELD.horizonY+30);
+  ctx.lineTo(FIELD.centerX + W*0.55, FIELD.groundBottomY);
+  ctx.lineTo(W, FIELD.groundBottomY);
+  ctx.closePath(); ctx.fill();
+
+  // 50m arc line drawn near kicker
+  ctx.strokeStyle = 'rgba(255,255,255,.35)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(FIELD.centerX, FIELD.groundBottomY + 80, W*0.55, 60, 0, Math.PI, 0, false);
+  ctx.stroke();
+
+  // Center kicking line marker
+  ctx.fillStyle = 'rgba(255,255,255,.25)';
+  ctx.fillRect(FIELD.centerX-1, FIELD.groundBottomY-8, 2, 8);
+}
+
+function drawGoals(shotDistance) {
+  // Goal posts at z=0. Tall middle posts at x = ±halfGoal, behind posts at x = ±(halfGoal + behindOffset).
+  const halfGoal = FIELD.goalSpacing / 2;
+  const tallPostHeight = 11; // metres (tall enough)
+  const behindPostHeight = 7;
+
+  const xs = [
+    {x: -(halfGoal + FIELD.behindOffset), h: behindPostHeight, kind:'behind'},
+    {x: -halfGoal,                          h: tallPostHeight,   kind:'main'},
+    {x:  halfGoal,                          h: tallPostHeight,   kind:'main'},
+    {x:  (halfGoal + FIELD.behindOffset),  h: behindPostHeight, kind:'behind'},
+  ];
+
+  // base shadow
+  const base = project(0, 0, 0, shotDistance);
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  ctx.beginPath();
+  ctx.ellipse(base.sx, base.groundY+1, lerp(60, 22, 1), 6, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  for (const p of xs) {
+    const bottom = project(p.x, 0, 0, shotDistance);
+    const top    = project(p.x, p.h, 0, shotDistance);
+    const w = Math.max(2, 5 * bottom.scale);
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,.28)';
+    ctx.fillRect(bottom.sx - w/2 + 2, bottom.sy - 2, w, 3);
+    // post
+    ctx.fillStyle = p.kind === 'main' ? COLOR.post : COLOR.postDk;
+    ctx.fillRect(bottom.sx - w/2, top.sy, w, bottom.sy - top.sy);
+    // cap
+    ctx.fillStyle = '#ffeed4';
+    ctx.fillRect(bottom.sx - w/2 - 1, top.sy - 3, w + 2, 3);
+  }
+
+  // Padding stripe near goal mouth (white line on ground between main posts)
+  const lL = project(-halfGoal, 0, 0, shotDistance);
+  const lR = project( halfGoal, 0, 0, shotDistance);
+  ctx.strokeStyle = 'rgba(255,255,255,.7)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(lL.sx, lL.groundY);
+  ctx.lineTo(lR.sx, lR.groundY);
+  ctx.stroke();
+}
+
+// ---------- Wind indicator ----------
+function drawWindSock(wind){
+  // Wind sock in top-left of canvas
+  const cx = 60, cy = 56;
+  const pole = 36;
+  // Pole
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx, cy+pole/2); ctx.lineTo(cx, cy-pole/2); ctx.stroke();
+  // Sock orientation based on wind sign and magnitude
+  const dir = sign(wind);
+  const mag = Math.min(1, Math.abs(wind)/40);
+  const sx = cx, sy = cy - pole/2 + 2;
+  const dx = dir * (10 + 28*mag);
+  const dy = lerp(8, -2, mag);
+  // body (triangle)
+  ctx.fillStyle = mag > 0.6 ? '#ff7b3a' : '#ffd24a';
+  ctx.beginPath();
+  ctx.moveTo(sx, sy-3);
+  ctx.lineTo(sx + dx, sy + dy - 5);
+  ctx.lineTo(sx + dx, sy + dy + 5);
+  ctx.lineTo(sx, sy+3);
+  ctx.closePath();
+  ctx.fill();
+  // stripe
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(sx + dx*0.5, sy+dy*0.5 - 5, 2, 10);
+
+  // Label
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 12px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('WIND', cx+22, cy-pole/2-4);
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.fillStyle = '#ffd24a';
+  ctx.fillText(`${Math.round(Math.abs(wind))} km/h ${dir>0?'→':'←'}`, cx+22, cy-pole/2+10);
+}
+
+// ---------- Ball ----------
+function drawBall(b, shotDist){
+  const p = project(b.x, b.y, b.z, shotDist);
+  const r = Math.max(3, 14 * p.scale);
+
+  // shadow on ground
+  const sh = project(b.x, 0, b.z, shotDist);
+  ctx.fillStyle = 'rgba(0,0,0,.30)';
+  ctx.beginPath();
+  ctx.ellipse(sh.sx, sh.groundY, r*0.9, Math.max(2, r*0.3), 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // Trail
+  for (let i = b.trail.length-1; i >=0; i--){
+    const tp = b.trail[i];
+    const pp = project(tp.x, tp.y, tp.z, shotDist);
+    const fade = i / b.trail.length;
+    const rr = r * (0.4 + fade*0.6);
+    if (b.torpedo){
+      ctx.fillStyle = `rgba(255, ${80 + 120*fade}, 30, ${0.18*fade + 0.05})`;
+    } else {
+      ctx.fillStyle = `rgba(255, 220, 90, ${0.10*fade})`;
+    }
+    ctx.beginPath(); ctx.ellipse(pp.sx, pp.sy, rr*1.1, rr*0.7, 0, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Ball body (Sherrin oval)
+  const grad = ctx.createRadialGradient(p.sx - r*0.3, p.sy - r*0.4, r*0.1, p.sx, p.sy, r*1.4);
+  if (b.torpedo){
+    grad.addColorStop(0, '#fff1c2');
+    grad.addColorStop(0.4, '#ff8a3a');
+    grad.addColorStop(1, '#9a0a00');
+  } else {
+    grad.addColorStop(0, '#ffe2a3');
+    grad.addColorStop(0.55, COLOR.sherrin);
+    grad.addColorStop(1, COLOR.sherrinDk);
+  }
+  ctx.fillStyle = grad;
+
+  ctx.save();
+  ctx.translate(p.sx, p.sy);
+  // Rotation derived from horizontal velocity for visual spin
+  ctx.rotate(b.spin);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r*1.3, r*0.85, 0, 0, Math.PI*2);
+  ctx.fill();
+  // Laces (white stripes)
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = Math.max(1, r*0.18);
+  ctx.beginPath(); ctx.moveTo(-r*0.7, 0); ctx.lineTo(r*0.7, 0); ctx.stroke();
+  ctx.lineWidth = Math.max(0.6, r*0.10);
+  for (let i=-2;i<=2;i++){
+    ctx.beginPath();
+    ctx.moveTo(i*r*0.25, -r*0.18);
+    ctx.lineTo(i*r*0.25,  r*0.18);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ---------- Minimap ----------
+function drawMinimap(){
+  const w = mmCanvas.width, h = mmCanvas.height;
+  mm.clearRect(0,0,w,h);
+  // Background
+  mm.fillStyle = '#072154';
+  mm.fillRect(0,0,w,h);
+
+  // Forward 50 arc area: semicircle bottom-up, center at top middle
+  const cx = w/2, cy = 28;
+  const radius = 140;
+  mm.fillStyle = '#1f6b2c';
+  mm.beginPath();
+  mm.arc(cx, cy, radius, 0, Math.PI);
+  mm.lineTo(cx-radius, cy);
+  mm.fill();
+
+  // Grass stripes
+  mm.strokeStyle = 'rgba(255,255,255,.06)';
+  mm.lineWidth = 1;
+  for (let r=30; r<radius; r+=18){
+    mm.beginPath(); mm.arc(cx, cy, r, 0, Math.PI); mm.stroke();
+  }
+  // Arc line
+  mm.strokeStyle = 'rgba(255,255,255,.6)';
+  mm.lineWidth = 1.5;
+  mm.beginPath(); mm.arc(cx, cy, radius, 0, Math.PI); mm.stroke();
+
+  // Goal posts at top (cx, cy)
+  mm.fillStyle = '#fff';
+  mm.fillRect(cx - 14, cy - 5, 4, 4);   // left behind
+  mm.fillRect(cx - 6,  cy - 7, 3, 7);    // left main
+  mm.fillRect(cx + 3,  cy - 7, 3, 7);    // right main
+  mm.fillRect(cx + 10, cy - 5, 4, 4);   // right behind
+  mm.fillStyle = '#ffd24a';
+  mm.fillRect(cx - 6, cy - 1, 9, 2);    // goal line
+
+  // Render player position based on shot (if present)
+  if (game.shot){
+    const sh = game.shot;
+    // angle 0 = directly in front; +ve = right pocket, -ve = left pocket
+    const a = sh.angle * Math.PI / 180;
+    const dist = sh.dist;
+    const px = cx + Math.sin(a) * dist * 2.6;   // scale m -> px
+    const py = cy + Math.cos(a) * dist * 2.6;
+    // Line from goal to player
+    mm.strokeStyle = 'rgba(255,210,74,.5)';
+    mm.setLineDash([3,3]);
+    mm.beginPath(); mm.moveTo(cx, cy+1); mm.lineTo(px, py); mm.stroke();
+    mm.setLineDash([]);
+    // Player marker
+    mm.fillStyle = '#ff5c5c';
+    mm.beginPath(); mm.arc(px, py, 5, 0, Math.PI*2); mm.fill();
+    mm.strokeStyle = '#fff'; mm.lineWidth = 1.5;
+    mm.beginPath(); mm.arc(px, py, 5, 0, Math.PI*2); mm.stroke();
+
+    // Wind arrow
+    const wd = sign(sh.wind);
+    const wmag = Math.min(1, Math.abs(sh.wind)/40);
+    mm.strokeStyle = wmag > 0.6 ? '#ff7b3a' : '#ffd24a';
+    mm.lineWidth = 2;
+    const wcx = w - 28, wcy = h - 18;
+    mm.beginPath();
+    mm.moveTo(wcx - wd*14, wcy);
+    mm.lineTo(wcx + wd*14, wcy);
+    mm.lineTo(wcx + wd*8, wcy - 4);
+    mm.moveTo(wcx + wd*14, wcy);
+    mm.lineTo(wcx + wd*8, wcy + 4);
+    mm.stroke();
+    mm.fillStyle = '#fff';
+    mm.font = '10px system-ui';
+    mm.textAlign = 'right';
+    mm.fillText('wind', w-8, h-26);
+  } else {
+    // Idle marker at front centre
+    mm.fillStyle = 'rgba(255,255,255,.4)';
+    mm.beginPath(); mm.arc(cx, cy + 80, 4, 0, Math.PI*2); mm.fill();
+  }
+
+  // Border
+  mm.strokeStyle = '#2a3aa0';
+  mm.lineWidth = 1;
+  mm.strokeRect(0.5, 0.5, w-1, h-1);
+}
+
+// ---------- Gauges ----------
+function drawSnapGauge(){
+  const w = snapCanvas.width, h = snapCanvas.height;
+  sg.clearRect(0,0,w,h);
+
+  // Background
+  sg.fillStyle = '#091d52';
+  sg.fillRect(0,0,w,h);
+
+  // Curve track (semi-arc)
+  const cx = w/2, cy = h + 10, r = 90;
+  // Track zones: outer = bad, mid = ok, center small = sweet
+  // We'll draw the arc colored by zones across angle from 200deg to 340deg (in radians)
+  const a0 = Math.PI * 1.1;   // 198 deg
+  const a1 = Math.PI * 1.9;   // 342 deg
+  const segs = 80;
+  for (let i=0;i<segs;i++){
+    const t0 = i/segs, t1 = (i+1)/segs;
+    const ang0 = lerp(a0, a1, t0);
+    const ang1 = lerp(a0, a1, t1);
+    // distance from middle 0..1
+    const mid = (t0 + t1)/2;
+    const d = Math.abs(mid - 0.5)*2;  // 0 center, 1 edges
+    let col;
+    if (d < 0.06) col = '#7be07b';        // sweet spot
+    else if (d < 0.2) col = '#d9f07b';
+    else if (d < 0.5) col = '#f0c449';
+    else if (d < 0.8) col = '#f08049';
+    else col = '#b8201d';
+    sg.fillStyle = col;
+    sg.beginPath();
+    sg.arc(cx, cy, r, ang0, ang1);
+    sg.arc(cx, cy, r-16, ang1, ang0, true);
+    sg.closePath(); sg.fill();
+  }
+
+  // Centre tick
+  sg.strokeStyle = '#fff';
+  sg.lineWidth = 1;
+  const midA = (a0+a1)/2;
+  sg.beginPath();
+  sg.moveTo(cx + Math.cos(midA)*(r-18), cy + Math.sin(midA)*(r-18));
+  sg.lineTo(cx + Math.cos(midA)*(r+2), cy + Math.sin(midA)*(r+2));
+  sg.stroke();
+
+  // Side labels
+  sg.fillStyle = '#9ab0ff';
+  sg.font = 'bold 10px system-ui';
+  sg.textAlign = 'left';
+  sg.fillText('HOOK', 6, 16);
+  sg.textAlign = 'right';
+  sg.fillText('BANANA', w-6, 16);
+  sg.textAlign = 'center';
+  sg.fillStyle = '#fff';
+  sg.fillText('CLEAN', cx, 16);
+
+  // Needle
+  let needleT;
+  if (game.state === STATE.AIM_SNAP) {
+    needleT = game.snap.t;          // 0..1
+  } else if (game.state === STATE.AIM_POWER || game.state === STATE.FLIGHT || game.state === STATE.RESULT) {
+    needleT = game.snap.value;
+  } else {
+    needleT = 0.5;
+  }
+  const nAng = lerp(a0, a1, needleT);
+  sg.strokeStyle = '#fff';
+  sg.lineWidth = 3;
+  sg.beginPath();
+  sg.moveTo(cx, cy);
+  sg.lineTo(cx + Math.cos(nAng)*(r+3), cy + Math.sin(nAng)*(r+3));
+  sg.stroke();
+  sg.fillStyle = '#fff';
+  sg.beginPath(); sg.arc(cx, cy, 4, 0, Math.PI*2); sg.fill();
+}
+
+function drawPowerGauge(){
+  const w = powerCanvas.width, h = powerCanvas.height;
+  pg.clearRect(0,0,w,h);
+  pg.fillStyle = '#091d52';
+  pg.fillRect(0,0,w,h);
+
+  const padL = 16, padR = 64;
+  const barW = w - padL - padR;
+  const barH = h - 28;
+  const x = padL, y = 14;
+
+  // Bar background
+  pg.fillStyle = '#0a1860';
+  pg.fillRect(x, y, barW, barH);
+
+  // Gradient zones
+  const grd = pg.createLinearGradient(x, 0, x+barW, 0);
+  grd.addColorStop(0,    '#b8201d');
+  grd.addColorStop(0.5,  '#f08049');
+  grd.addColorStop(0.85, '#7be07b');
+  grd.addColorStop(0.95, '#7be07b');
+  grd.addColorStop(1.0,  '#ff2a16');
+  pg.fillStyle = grd;
+  pg.fillRect(x, y, barW, barH);
+
+  // Sweet zone bracket for *this* shot's required power
+  if (game.shot){
+    const req = requiredPowerForShot(game.shot);
+    const zoneLo = req.lo, zoneHi = req.hi;
+    pg.fillStyle = 'rgba(255,255,255,.25)';
+    pg.fillRect(x + zoneLo*barW, y-3, (zoneHi-zoneLo)*barW, barH+6);
+    pg.strokeStyle = '#fff';
+    pg.lineWidth = 2;
+    pg.strokeRect(x + zoneLo*barW, y-3, (zoneHi-zoneLo)*barW, barH+6);
+  }
+
+  // Needle
+  let pT;
+  if (game.state === STATE.AIM_POWER) pT = game.power.t;
+  else if (game.state === STATE.FLIGHT || game.state === STATE.RESULT) pT = game.power.value;
+  else pT = 0;
+  pg.fillStyle = '#fff';
+  pg.fillRect(x + pT*barW - 2, y - 6, 4, barH+12);
+
+  // Tip glow
+  pg.fillStyle = pT > 0.95 ? '#ff5b1a' : '#ffd24a';
+  pg.beginPath(); pg.arc(x + pT*barW, y + barH/2, 6, 0, Math.PI*2); pg.fill();
+
+  // Labels
+  pg.fillStyle = '#9ab0ff';
+  pg.font = 'bold 10px system-ui';
+  pg.textAlign = 'left'; pg.fillText('SOFT', x, h-6);
+  pg.textAlign = 'right'; pg.fillText('TORP', x+barW, h-6);
+
+  // Numeric readout
+  pg.fillStyle = '#fff';
+  pg.font = 'bold 18px system-ui, sans-serif';
+  pg.textAlign = 'left';
+  pg.fillText(`${Math.round(pT*100)}%`, x+barW + 10, y + barH/2 + 6);
+  pg.fillStyle = '#9ab0ff';
+  pg.font = '10px system-ui';
+  pg.fillText('POWER', x+barW + 10, y + barH/2 + 20);
+}
+
+// Each shot has a required power band scaled to its distance.
+// 45m needs ~92.5% (90-95). Closer needs less, longer needs more.
+function requiredPowerForShot(shot){
+  // Calibrated so that 45m -> 0.925 centre. dist=15 -> ~0.48, dist=50 -> ~0.96.
+  const center = clamp(0.475 + (shot.dist - 15) / 35 * 0.525, 0.50, 0.97);
+  const width = 0.05; // ±2.5%
+  let lo = center - width/2;
+  let hi = center + width/2;
+  // Boundary snap shots get a slightly wider band (easier on power, harder on angle)
+  if (shot.tier === 2) { lo -= 0.015; hi += 0.015; }
+  // Straight shots a touch tighter
+  if (shot.tier === 0) { lo += 0.005; hi -= 0.005; }
+  return { center, lo: clamp(lo,0,1), hi: clamp(hi,0,1) };
+}
+
+// ---------- Shot lifecycle ----------
+function newShot(){
+  game.shot = generateShot(game.streak);
+  game.ball = null;
+  game.snap = { t: 0, v: 1.6 + Math.min(1.4, game.streak*0.1), value: 0.5 };
+  game.power = { t: 0, v: 1.5 + Math.min(1.6, game.streak*0.12), value: 0, dir: 1 };
+  game.flashTimer = 0;
+  game.flashText = '';
+  game.particles.length = 0;
+  game.shotIntroT = 0;
+  game.state = STATE.SHOT_INTRO;
+  elShot.textContent = game.shot.name;
+  elDist.textContent = `${Math.round(game.shot.dist)}m`;
+  const sideStr = game.shot.angle === 0 ? '0°' : `${Math.abs(Math.round(game.shot.angle))}° ${game.shot.side<0?'L':'R'}`;
+  elAngle.textContent = sideStr;
+  elWind.textContent  = `${Math.round(game.shot.windMag)} ${game.shot.wind<0?'←':'→'}`;
+  elHint.textContent  = 'SIREN! Tap or press Space — stop the snap needle.';
+  Audio.siren();
+}
+
+function startKick(){
+  // Snap stopped first, then power. Initialise.
+  // Already done — call when first click stops snap and we enter power phase.
+}
+
+function commitKick(){
+  const shot = game.shot;
+  const snapVal = game.snap.value;          // 0..1, 0.5 = perfect
+  const snapOff = (snapVal - 0.5) * 2;      // -1..+1 (sign = curve direction)
+  const power   = clamp(game.power.value, 0, 1);
+  const req = requiredPowerForShot(shot);
+
+  // Expected total flight distance is proportional to power.
+  // At power == req.center, expectedDist == shot.dist (reaches the goals).
+  // Under-powered: short. Over-powered: goes long & drifts more in wind.
+  const expectedDist = clamp((power / req.center) * shot.dist, 4, shot.dist * 1.25);
+  const flightFrames = 70;                  // visual flight time
+  const vForward = expectedDist / flightFrames;
+
+  // Lateral push budgets (metres over flight) -> per-frame contributions
+  // Wind: 30 km/h side wind should drift ~3m on a free kick.
+  const windPushPerFrame = (shot.wind / 30) * 3 / (flightFrames * 0.5); // scaled by avg(tFlight)
+  // Curve: max snap offset (±1) curves ±2.5m at apex.
+  const curveMagPerFrame = 2.5 / (flightFrames * 0.4);
+  const curvePerFrame = snapOff * curveMagPerFrame;
+  // Natural drift from angle: kicker on the boundary tends to fade further toward the boundary.
+  // 80° boundary kick should drift ~3.5m unless curved back.
+  const aimRad = shot.angle * Math.PI/180;
+  const driftPerFrame = Math.sin(aimRad) * 3.5 / flightFrames;
+
+  // Torpedo check
+  const isTorpedo = (power >= 0.98) && (Math.abs(snapOff) < 0.05);
+
+  game.ball = {
+    x: 0, y: 0.0, z: shot.dist,
+    vForward,
+    expectedDist,
+    distTravelled: 0,
+    windPushPerFrame,
+    curvePerFrame,
+    driftPerFrame,
+    shotDist: shot.dist,
+    startZ: shot.dist,
+    landed: false,
+    trail: [],
+    spin: 0,
+    torpedo: isTorpedo,
+    power,
+    snapOff,
+    // Apex altitude scales with power slightly and inversely with distance
+    apex: clamp(6 + power*8 - shot.dist*0.04, 4, 18),
   };
 
-  class Rect{
-    constructor(x,y,w,h){ this.x=x; this.y=y; this.w=w; this.h=h; }
-    get left(){return this.x}
-    get right(){return this.x+this.w}
-    get top(){return this.y}
-    get bottom(){return this.y+this.h}
-    intersects(o){return !(this.right<o.left || this.left>o.right || this.bottom<o.top || this.top>o.bottom)}
+  Audio.kickThud();
+  if (isTorpedo) Audio.thunk();
+  game.shakeT = 12;
+  game.state = STATE.FLIGHT;
+  elHint.textContent = isTorpedo ? 'TORPEDO! Maximum velocity!' : 'Ball away — watch it fly!';
+}
+
+// Physics step for the ball in flight
+function stepBall(dt){
+  const b = game.ball;
+  if (!b || b.landed) return;
+
+  // Forward movement
+  b.z -= b.vForward;
+  b.distTravelled += b.vForward;
+
+  // Flight progress relative to expected (power-determined) flight distance
+  const tFlight = clamp(b.distTravelled / b.expectedDist, 0, 1);
+  // Parabolic altitude based on flight progress (so under-powered shots come down short)
+  b.y = b.apex * 4 * tFlight * (1 - tFlight);
+
+  // Lateral contributions
+  const curveT = 4 * tFlight * (1 - tFlight);     // peaks midflight
+  b.x += b.windPushPerFrame * tFlight;            // wind impact grows late in flight
+  b.x += b.curvePerFrame * curveT * 1.6;          // curve dominates mid-flight
+  b.x += b.driftPerFrame;                         // constant drift from angle
+
+  // Snap miss adds small jitter at high offsets
+  if (Math.abs(b.snapOff) > 0.35 && tFlight < 0.95) {
+    b.x += (Math.random() - 0.5) * 0.02 * Math.abs(b.snapOff);
   }
 
-  class Player{
-    constructor(){
-      this.w=44; this.h=44;
-      this.spawnX=80; this.spawnY=360;
-      this.reset();
-    }
-    reset(){
-      this.x=this.spawnX; this.y=this.spawnY; this.vx=0; this.vy=0; this.onGround=false; this.dir=1; this.inv=0;
-    }
-    rect(){return new Rect(this.x, this.y, this.w, this.h)}
-    update(dt, world){
-      // input
-      let ax=0;
-      if(keys.has('ArrowLeft')||keys.has('KeyA')) ax-=1;
-      if(keys.has('ArrowRight')||keys.has('KeyD')) ax+=1;
-      this.vx += ax * G.moveSpeed * dt;
-      if(Math.abs(ax)<0.01) this.vx *= G.friction; // drift slow
+  // Spin for visual
+  b.spin += 0.45;
 
-      this.dir = ax!==0? sign(ax): this.dir;
+  // Trail
+  b.trail.push({ x: b.x, y: b.y, z: Math.max(b.z, 0) });
+  if (b.trail.length > 24) b.trail.shift();
 
-      // jump
-      if((keys.has('Space')||keys.has('ArrowUp')||keys.has('KeyW')) && this.onGround){
-        this.vy = -G.jump; this.onGround=false;
-      }
+  // Torpedo fire particles
+  if (b.torpedo && Math.random() < 0.65) spawnFireParticle(b);
 
-      // gravity
-      this.vy += G.gravity*dt;
-
-      // integrate
-      this.x += this.vx*dt; this.y += this.vy*dt;
-
-      // world bounds
-      if(this.x<0) {this.x=0; this.vx=0}
-      if(this.x>world.w-this.w){this.x=world.w-this.w; this.vx=0}
-
-      // platforms collision (AABB vs AABB, simple from-top landings)
-      this.onGround=false;
-      const r=this.rect();
-      for(const p of world.platforms){
-        const pr = p.rect();
-        if(r.intersects(pr)){
-          const prevY = this.y - this.vy*dt; // approximate previous y for side resolution
-          const cameFromAbove = prevY + this.h <= pr.top + 2; // fudge
-          if(cameFromAbove && this.vy>0){
-            this.y = pr.top - this.h; this.vy=0; this.onGround=true;
-          } else if(this.x+this.w/2 < pr.left){
-            this.x = pr.left - this.w; this.vx=0;
-          } else if(this.x+this.w/2 > pr.right){
-            this.x = pr.right; this.vx=0;
-          }
-        }
-      }
-
-      // fell below
-      if(this.y>world.h+200) world.loseLife();
-
-      if(this.inv>0) this.inv-=dt;
-    }
-    draw(c){
-      // Kangaroo (stylized) — body
-      const t = performance.now()/1000;
-      const hop = this.onGround? 0 : Math.sin(t*30)*1.5;
-      c.save();
-      c.translate(this.x+this.w/2, this.y+this.h/2+hop);
-      c.scale(this.dir,1);
-
-      // tail
-      c.fillStyle = '#b07b3a';
-      c.beginPath(); c.moveTo(-10,12); c.quadraticCurveTo(-34,6,-46,14); c.quadraticCurveTo(-28,20,-10,18); c.closePath(); c.fill();
-
-      // body
-      c.fillStyle = '#c58a43';
-      c.beginPath(); c.ellipse(0, 6, 18, 14, 0, 0, Math.PI*2); c.fill();
-      // head
-      c.beginPath(); c.ellipse(10,-10,10,9,0,0,Math.PI*2); c.fill();
-      // ear
-      c.beginPath(); c.moveTo(16,-18); c.lineTo(22,-28); c.lineTo(10,-20); c.closePath(); c.fill();
-      // arm
-      c.beginPath(); c.moveTo(8,4); c.lineTo(18,8); c.lineTo(10,10); c.closePath(); c.fill();
-      // legs
-      c.beginPath(); c.moveTo(-6,14); c.lineTo(6,14); c.lineTo(10,22); c.lineTo(-10,22); c.closePath(); c.fill();
-      // eye
-      c.fillStyle = '#222'; c.beginPath(); c.arc(13,-12,1.5,0,6.28); c.fill();
-
-      // little shine when invincible
-      if(this.inv>0){ c.strokeStyle='rgba(255,255,255,.8)'; c.lineWidth=2; c.strokeRect(-this.w/2+1,-this.h/2+1,this.w-2,this.h-2); }
-
-      c.restore();
-    }
+  // Landing: flight progress complete OR reached goal line.
+  if (tFlight >= 1 || b.z <= 0) {
+    b.y = 0;
+    b.z = Math.max(b.z, 0);
+    b.landed = true;
+    resolveShot(b);
   }
+}
 
-  class Platform{
-    constructor(x,y,w,h=12,color='#2c3c72'){ this.x=x; this.y=y; this.w=w; this.h=h; this.color=color; }
-    rect(){return new Rect(this.x,this.y,this.w,this.h)}
-    draw(c){ c.fillStyle=this.color; c.fillRect(this.x,this.y,this.w,this.h); }
+// ---------- Particles ----------
+function spawnGoalConfetti() {
+  const colors = ['#e8b73a','#b8201d','#ffffff','#7be07b','#3aa6ff','#ff7b3a'];
+  for (let i=0;i<140;i++){
+    game.particles.push({
+      kind:'confetti',
+      x: W/2 + (Math.random()-0.5)*60,
+      y: H/2 + (Math.random()-0.5)*40,
+      vx: (Math.random()-0.5)*9,
+      vy: -Math.random()*9 - 2,
+      g: 0.3,
+      life: 60 + Math.random()*60,
+      age: 0,
+      color: colors[(Math.random()*colors.length)|0],
+      rot: Math.random()*Math.PI*2,
+      vr: (Math.random()-0.5)*0.4,
+      w: 4 + Math.random()*5,
+      h: 2 + Math.random()*4,
+    });
   }
-
-  class Banana{
-    constructor(x,y){ this.x=x; this.y=y; this.r=10; this.t=rand(0,6.28); this.taken=false; }
-    rect(){ return new Rect(this.x-this.r, this.y-this.r, this.r*2, this.r*2); }
-    update(dt){ this.t += dt*3; }
-    draw(c){ if(this.taken) return; const r=this.r; c.save(); c.translate(this.x,this.y-4+Math.sin(this.t)*3); c.rotate(-0.4);
-      // banana crescent
-      c.fillStyle = '#ffd54a';
-      c.beginPath(); c.arc(0,0,r, Math.PI*.1, Math.PI*1.9, false); c.arc(3,0,r-6, Math.PI*1.9, Math.PI*.1, true); c.closePath(); c.fill();
-      c.fillStyle='#a07200'; c.beginPath(); c.arc(-r*.9, -1, 2.5, 0, 6.28); c.arc(r*.9, 1, 2.5, 0, 6.28); c.fill();
-      c.restore(); }
-  }
-
-  class Spider{
-    constructor(x, topY, span){ this.x=x; this.topY=topY; this.span=span; this.t=rand(0,6.28); this.r=12; }
-    get y(){ return this.topY + (Math.sin(this.t)*0.5+0.5)*this.span; }
-    rect(){ return new Rect(this.x-this.r, this.y-this.r, this.r*2, this.r*2); }
-    update(dt){ this.t += dt*1.3; }
-    draw(c){ const y=this.y; c.save();
-      // string
-      c.strokeStyle='#cdd6ff'; c.lineWidth=1; c.beginPath(); c.moveTo(this.x, this.topY-60); c.lineTo(this.x, y); c.stroke();
-      // body
-      c.fillStyle='#2e2e39'; c.beginPath(); c.arc(this.x, y, this.r, 0, 6.28); c.fill();
-      // legs
-      for(let i=0;i<4;i++){
-        const off=i*6; c.beginPath(); c.moveTo(this.x-this.r+2, y-4+off/8); c.lineTo(this.x-this.r-6, y-10+off/8); c.strokeStyle='#252530'; c.stroke();
-        c.beginPath(); c.moveTo(this.x+this.r-2, y-4+off/8); c.lineTo(this.x+this.r+6, y-10+off/8); c.stroke();
-      }
-      c.restore(); }
-  }
-
-  class Boomerang{
-    constructor(x,y,dir=1){ this.x=x; this.y=y; this.dir=dir; this.t=0; this.speed=140+Math.random()*60; this.r=10; this.dead=false; }
-    rect(){ return new Rect(this.x-14, this.y-14, 28, 28); }
-    update(dt,world){
-      this.t += dt*2.2; 
-      this.x += this.dir * this.speed * dt;
-      this.y += Math.sin(this.t*2) * 30 * dt * 2.5;
-      if(this.x<-60 || this.x>world.w+60) this.dead=true;
-    }
-    draw(c){ c.save(); c.translate(this.x,this.y); c.rotate(this.t*3*this.dir);
-      c.fillStyle='#f4af2d'; c.beginPath(); c.moveTo(-18,-4); c.quadraticCurveTo(0,-16,18,-4); c.quadraticCurveTo(0,6,-18,-4); c.closePath(); c.fill();
-      c.strokeStyle='#5c3b00'; c.lineWidth=2; c.stroke(); c.restore(); }
-  }
-
-  class World{
-    constructor(){ this.w=960; this.h=540; this.platforms=[]; this.bananas=[]; this.spiders=[]; this.boomerangs=[]; this.spawnTimer=0; this.player=new Player(); this.resetLevel(1); }
-    resetLevel(n){
-      G.level = n; levelEl.textContent=n;
-      this.platforms=[
-        new Platform(0,this.h-18,this.w,18,'#213067'),
-        new Platform(80,420,200,14),
-        new Platform(340,360,160,14),
-        new Platform(560,300,160,14),
-        new Platform(770,240,160,14),
-        new Platform(180,250,120,14),
-      ];
-      this.bananas=[]; this.spiders=[]; this.boomerangs=[]; this.spawnTimer=0;
-
-      // scatter bananas on platforms
-      const spots=[ [120,380],[220,380],[360,320],[420,320],[600,260],[740,220],[820,200],[200,210] ];
-      for(const [x,y] of spots){ this.bananas.push( new Banana(x,y) ); }
-      G.bananasInLevel = this.bananas.length;
-
-      // spiders hanging near platforms
-      this.spiders.push( new Spider(340, 180, 120) );
-      this.spiders.push( new Spider(740, 120, 150) );
-
-      // boomerang launchers (off‑screen)
-      this.boomerangs.push(new Boomerang(-30, 140, +1));
-      this.boomerangs.push(new Boomerang(this.w+30, 360, -1));
-
-      this.player.reset();
-    }
-
-    loseLife(){
-      if(G.gameOver) return;
-      G.maxLives = Math.max(G.maxLives, 3); // ensure baseline
-      const lives = parseInt(livesEl.textContent,10)-1;
-      livesEl.textContent = Math.max(0,lives);
-      this.player.inv = 1.2;
-      this.player.reset();
-      if(lives<=0){ this.end(false); }
-    }
-
-    end(win){
-      G.running=false; G.gameOver=true;
-      showOverlay(win? `You collected all bananas!` : `Oh no — the spiders & boomerangs got you!`, win);
-    }
-
-    update(dt){
-      if(!G.running) return;
-      this.player.update(dt,this);
-      for(const p of this.platforms){} // static
-      for(const b of this.bananas) b.update(dt);
-      for(const s of this.spiders) s.update(dt);
-
-      // spawn more boomerangs gradually
-      this.spawnTimer += dt;
-      if(this.spawnTimer>4){ this.spawnTimer=0; const dir=Math.random()<0.5?1:-1; this.boomerangs.push(new Boomerang(dir>0?-30:this.w+30, rand(120,420), dir)); }
-      for(const br of this.boomerangs) br.update(dt,this);
-      this.boomerangs = this.boomerangs.filter(b=>!b.dead);
-
-      // collisions: bananas
-      const pr = this.player.rect();
-      for(const bn of this.bananas){
-        if(!bn.taken && pr.intersects(bn.rect())){
-          bn.taken=true; G.score+=10; scoreEl.textContent=G.score;
-        }
-      }
-      // win if all bananas taken
-      if(this.bananas.every(b=>b.taken)){
-        this.end(true);
-      }
-
-      // collisions: enemies
-      if(this.player.inv<=0){
-        const hitEnemy = this.spiders.some(s=> pr.intersects(s.rect())) || this.boomerangs.some(b=> pr.intersects(b.rect()));
-        if(hitEnemy){ this.loseLife(); }
-      }
-    }
-
-    draw(c){
-      // sky gradient + stars
-      const w=this.w, h=this.h; c.clearRect(0,0,w,h);
-      const sky = c.createLinearGradient(0,0,0,h);
-      sky.addColorStop(0,'#0b163a'); sky.addColorStop(1,'#0a1531');
-      c.fillStyle=sky; c.fillRect(0,0,w,h);
-
-      // background hill silhouettes
-      c.fillStyle='#0d1a42'; c.beginPath();
-      c.moveTo(0,h-120); for(let x=0;x<=w;x+=40){ c.lineTo(x, h-120 - Math.sin((x/80))*18 - (x/w)*30); } c.lineTo(w,h); c.lineTo(0,h); c.closePath(); c.fill();
-
-      // platforms
-      for(const p of this.platforms) p.draw(c);
-
-      // bananas
-      for(const b of this.bananas) b.draw(c);
-
-      // spiders
-      for(const s of this.spiders) s.draw(c);
-
-      // boomerangs
-      for(const b of this.boomerangs) b.draw(c);
-
-      // player
-      this.player.draw(c);
-
-      // HUD shadows
-      c.fillStyle='rgba(0,0,0,.25)';
-      c.fillRect(0,0,w,10);
-    }
-  }
-
-  const world = new World();
-
-  function showOverlay(msg, win){
-    overlay.innerHTML = `<div class="card">\n      <h2>${win? '🍌 You win!': '💥 Game Over'}</h2>\n      <p>${msg}</p>\n      <p>Press <span class="kbd">R</span> to restart, or <span class="kbd">P</span> to ${G.running?'pause':'play'}.</p>\n    </div>`;
-    overlay.style.pointerEvents = 'none';
-    overlay.style.display = 'flex';
-  }
-  function hideOverlay(){ overlay.innerHTML=''; overlay.style.display='none'; }
-
-  function resetAll(){
-    G.score=0; scoreEl.textContent=0; livesEl.textContent=3; G.gameOver=false; G.running=true; world.resetLevel(1); hideOverlay();
-  }
-
-  pauseBtn.addEventListener('click', ()=>{ G.running=!G.running; if(!G.running) showOverlay('Paused. Press P or button to resume.'); else hideOverlay(); });
-  resetBtn.addEventListener('click', resetAll);
-
-  addEventListener('keydown', e=>{
-    if(e.code==='KeyP') { G.running=!G.running; if(!G.running) showOverlay('Paused. Press P to resume.'); else hideOverlay(); }
-    if(e.code==='KeyR') { resetAll(); }
+}
+function spawnFireParticle(b){
+  const p = project(b.x, b.y, b.z, b.startZ);
+  game.particles.push({
+    kind:'fire',
+    x: p.sx + (Math.random()-0.5)*4,
+    y: p.sy + (Math.random()-0.5)*4,
+    vx: (Math.random()-0.5)*0.6,
+    vy: 0.4 + Math.random()*0.6,
+    life: 20 + Math.random()*14,
+    age: 0,
+    r: 3 + Math.random()*4,
   });
-
-  // Main loop
-  let last=performance.now();
-  function loop(t){
-    const dt = Math.min(0.033, (t-last)/1000); last=t;
-    fitCanvas(); // keep crisp on resizes
-
-    world.update(dt);
-
-    // draw at internal resolution; canvas already in device pixels
-    world.draw(ctx);
-
-    requestAnimationFrame(loop);
+}
+function stepParticles(){
+  for (let i=game.particles.length-1;i>=0;i--){
+    const p = game.particles[i];
+    p.age++;
+    if (p.kind === 'confetti'){
+      p.vy += p.g;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+    } else if (p.kind === 'fire'){
+      p.x += p.vx;
+      p.y += p.vy;
+      p.r *= 0.94;
+    }
+    if (p.age > p.life) game.particles.splice(i,1);
   }
+}
+function drawParticles(){
+  for (const p of game.particles){
+    if (p.kind === 'confetti'){
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      ctx.restore();
+    } else if (p.kind === 'fire'){
+      const a = 1 - p.age/p.life;
+      ctx.fillStyle = `rgba(255, ${60 + 160*a}, 30, ${a*0.9})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    }
+  }
+}
+
+// ---------- Scoring resolution ----------
+function resolveShot(b){
+  // At final z=0 evaluate ball.x against post positions
+  const halfGoal = FIELD.goalSpacing/2;             // 3.2 m
+  const behindEdge = halfGoal + FIELD.behindOffset; // 9.6 m
+  const x = b.x;
+  let outcome = 'out';
+  // If ball landed before reaching the goal line, it's short.
+  if (b.z > 0.5) {
+    outcome = 'short';
+  } else if (Math.abs(x) < halfGoal - 0.15) {
+    outcome = 'goal';
+  } else if (Math.abs(x) < halfGoal + 0.15) {
+    // grazed the post
+    outcome = 'post';
+  } else if (Math.abs(x) < behindEdge) {
+    outcome = 'behind';
+  } else {
+    outcome = 'out';
+  }
+
+  // Result handling
+  let points = 0;
+  let label = '', sub = '';
+  if (outcome === 'goal'){
+    points = 6;
+    label = 'GOAL!';
+    sub = b.torpedo ? 'TORPEDO! 6 POINTS' : '6 POINTS';
+    game.score += 6;
+    game.streak += 1;
+    spawnGoalConfetti();
+    Audio.crowdCheer();
+  } else if (outcome === 'post'){
+    // Post hit -> behind (1) per rules
+    points = 1;
+    label = 'BEHIND';
+    sub = 'Hit the post — through for a minor';
+    game.score += 1;
+    Audio.thunk();
+    Audio.missSigh();
+    game.state = STATE.RESULT;
+  } else if (outcome === 'behind'){
+    points = 1;
+    label = 'BEHIND';
+    sub = '1 POINT — streak broken';
+    game.score += 1;
+    Audio.missSigh();
+  } else if (outcome === 'short'){
+    label = 'TOO SHORT!';
+    sub = 'Didn\'t make the distance';
+    Audio.missSigh();
+  } else {
+    label = 'OUT ON THE FULL';
+    sub = 'Missed the lot';
+    Audio.missSigh();
+  }
+
+  game.flashText = label;
+  game.flashSub  = sub;
+  game.flashTimer = 90;     // ~1.5s @ 60fps
+  game.resultT = 0;
+
+  // Update displays
+  elScore.textContent = game.score;
+  elStreak.textContent = game.streak;
+  if (game.score > game.high){
+    game.high = game.score;
+    localStorage.setItem('sirensCall.high', String(game.high));
+    elHigh.textContent = game.high;
+  }
+
+  if (outcome === 'goal'){
+    // Set up next shot after delay
+    game.state = STATE.RESULT;
+    setTimeout(() => {
+      if (game.state === STATE.RESULT) newShot();
+    }, 1700);
+  } else {
+    // Game over
+    game.state = STATE.RESULT;
+    setTimeout(() => {
+      gameOver();
+    }, 1700);
+  }
+}
+
+function gameOver(){
+  game.state = STATE.GAMEOVER;
+  Audio.siren();
+  showOverlay(`
+    <h2 class="arcade text-4xl md:text-5xl glow mb-1" style="color:#ffd24a">FULL TIME</h2>
+    <p class="opacity-90 mb-3">The siren has sounded. Final tally:</p>
+    <div class="flex gap-4 justify-center mb-4 flex-wrap">
+      <div class="pill text-base">Score <b>${game.score}</b></div>
+      <div class="pill text-base">Streak <b>${game.streak}</b></div>
+      <div class="pill text-base">High <b>${game.high}</b></div>
+    </div>
+    <button id="againBtn" class="btn btn-pri arcade text-xl">PLAY AGAIN</button>
+  `);
+  document.getElementById('againBtn').addEventListener('click', startGame);
+}
+
+// ---------- Overlay ----------
+function hideOverlay(){
+  overlay.classList.remove('show');
+  overlay.innerHTML = '';
+}
+function showOverlay(html){
+  overlay.innerHTML = `<div class="card">${html}</div>`;
+  overlay.classList.add('show');
+}
+
+// ---------- Game flow ----------
+function startGame(){
+  Audio.ensure();
+  hideOverlay();
+  game.score = 0;
+  game.streak = 0;
+  elScore.textContent = 0;
+  elStreak.textContent = 0;
+  newShot();
+}
+
+function handleAction(){
+  // Single button "kick" action drives the state machine.
+  if (game.state === STATE.SHOT_INTRO){
+    // Allow skip-forward to the snap gauge if player is ready.
+    game.state = STATE.AIM_SNAP;
+    elHint.textContent = 'Stop the SNAP — get it in the green centre.';
+    Audio.tick(700);
+    return;
+  }
+  if (game.state === STATE.AIM_SNAP){
+    game.snap.value = game.snap.t;
+    game.state = STATE.AIM_POWER;
+    elHint.textContent = 'Now the POWER — stop inside the bracket.';
+    Audio.tick(900);
+    return;
+  }
+  if (game.state === STATE.AIM_POWER){
+    game.power.value = game.power.t;
+    Audio.tick(1100);
+    commitKick();
+    return;
+  }
+  if (game.state === STATE.GAMEOVER){
+    startGame();
+    return;
+  }
+  // FLIGHT and RESULT: ignore input
+}
+
+// ---------- Update loop ----------
+let lastT = 0;
+function loop(t){
+  const dt = Math.min(0.033, (t - lastT)/1000) || 0.016;
+  lastT = t;
+
+  // Step state
+  if (game.state === STATE.AIM_SNAP){
+    game.snap.t += game.snap.v * dt;
+    if (game.snap.t > 1) { game.snap.t = 1 - (game.snap.t - 1); game.snap.v *= -1; }
+    if (game.snap.t < 0) { game.snap.t = -game.snap.t; game.snap.v *= -1; }
+  } else if (game.state === STATE.AIM_POWER){
+    game.power.t += game.power.v * dt * game.power.dir;
+    if (game.power.t >= 1){ game.power.t = 1; game.power.dir = -1; }
+    if (game.power.t <= 0){ game.power.t = 0; game.power.dir =  1; }
+  } else if (game.state === STATE.FLIGHT){
+    stepBall(dt);
+  } else if (game.state === STATE.SHOT_INTRO){
+    game.shotIntroT += dt;
+    if (game.shotIntroT > 1.1){
+      game.state = STATE.AIM_SNAP;
+      elHint.textContent = 'Stop the SNAP — get it in the green centre.';
+      Audio.tick(700);
+    }
+  }
+
+  stepParticles();
+  if (game.flashTimer > 0) game.flashTimer--;
+  if (game.shakeT > 0) game.shakeT--;
+
+  draw();
   requestAnimationFrame(loop);
+}
+
+function draw(){
+  // Camera shake offset
+  let sx = 0, sy = 0;
+  if (game.shakeT > 0){
+    const m = game.shakeT/12;
+    sx = (Math.random()-0.5) * 8 * m;
+    sy = (Math.random()-0.5) * 6 * m;
+  }
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  drawSky();
+  drawGround();
+
+  // Behind kicker silhouette at bottom of canvas (out-of-focus shoulders)
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  ctx.lineTo(0, H-30);
+  ctx.quadraticCurveTo(W*0.25, H-70, W*0.45, H-46);
+  ctx.lineTo(W*0.55, H-46);
+  ctx.quadraticCurveTo(W*0.75, H-70, W, H-30);
+  ctx.lineTo(W, H);
+  ctx.closePath(); ctx.fill();
+
+  if (game.shot) {
+    drawGoals(game.shot.dist);
+    drawWindSock(game.shot.wind);
+
+    // Ball
+    if (game.ball){
+      drawBall(game.ball, game.shot.dist);
+    } else if (game.state === STATE.SHOT_INTRO || game.state === STATE.AIM_SNAP || game.state === STATE.AIM_POWER){
+      // Pre-kick ball at the kicker
+      drawBall({
+        x: 0, y: 0.3, z: game.shot.dist,
+        startZ: game.shot.dist,
+        trail: [],
+        spin: 0,
+        torpedo: false,
+      }, game.shot.dist);
+    }
+  } else {
+    // Idle: draw simple posts straight ahead
+    drawGoals(40);
+  }
+
+  // Torpedo indicator overlay
+  if (game.ball && game.ball.torpedo){
+    ctx.fillStyle = '#ff5b1a';
+    ctx.font = 'bold 22px Impact, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('TORPEDO 🔥', W-14, 26);
+  }
+
+  drawParticles();
+
+  // Flash text (goal/behind)
+  if (game.flashTimer > 0 && game.flashText){
+    const t = game.flashTimer / 90;
+    const alpha = clamp(t*1.4, 0, 1);
+    const isGoal = /GOAL/.test(game.flashText);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = 'center';
+    ctx.font = `${isGoal ? 'bold 96px' : 'bold 56px'} Impact, Haettenschweiler, sans-serif`;
+    ctx.lineWidth = 8; ctx.strokeStyle = '#7a1010';
+    ctx.fillStyle = isGoal ? '#fff' : '#ffd24a';
+    ctx.strokeText(game.flashText, W/2, H/2);
+    ctx.fillText(game.flashText, W/2, H/2);
+    ctx.font = 'bold 22px Impact, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(game.flashSub, W/2, H/2 + 36);
+    ctx.restore();
+  }
+
+  ctx.restore();
+
+  // Side panels
+  drawMinimap();
+  drawSnapGauge();
+  drawPowerGauge();
+}
+
+// ---------- Input ----------
+function bindInputs(){
+  canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    handleAction();
+  });
+  // also allow tap/click anywhere on the canvas panel
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'Enter') {
+      e.preventDefault();
+      handleAction();
+    } else if (e.code === 'KeyR') {
+      e.preventDefault();
+      if (game.state !== STATE.IDLE) startGame();
+    } else if (e.code === 'KeyM') {
+      toggleMute();
+    }
+  });
+  startBtn.addEventListener('click', startGame);
+  muteBtn.addEventListener('click', toggleMute);
+}
+function toggleMute(){
+  game.muted = !game.muted;
+  localStorage.setItem('sirensCall.muted', game.muted ? '1' : '0');
+  muteBtn.textContent = game.muted ? '🔇' : '🔊';
+}
+
+// ---------- Boot ----------
+function fitCanvas(){
+  // canvas scales naturally with CSS width:100%; logical pixels stay 800x500.
+  // But re-render once to handle initial layout.
+  draw();
+}
+
+bindInputs();
+fitCanvas();
+window.addEventListener('resize', fitCanvas);
+requestAnimationFrame(loop);
 
 })();
 </script>
